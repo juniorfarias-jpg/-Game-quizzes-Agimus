@@ -34,6 +34,51 @@ export interface DevControlOverrides {
   unlimitedTime: boolean;
 }
 
+export interface BrandingColorsConfig {
+  primaryColor: string; // e.g. '#00d2ff' or '#0284c7'
+  secondaryColor: string; // e.g. '#6366f1'
+  backgroundColor: string; // e.g. '#090d16'
+  themePreset: 'agimus_blue' | 'cyberpunk' | 'emerald_tech' | 'sunset' | 'crimson' | 'custom';
+}
+
+export interface CompanyLogoConfig {
+  enabled: boolean;
+  logoUrl: string;
+  companyName: string;
+  subTitle?: string;
+}
+
+export interface RegistrationFormConfig {
+  enabled: boolean; // require registration before playing
+  requireName: boolean;
+  showEmail: boolean;
+  requireEmail: boolean;
+  showPhone: boolean;
+  requirePhone: boolean;
+  showCompany: boolean;
+  requireCompany: boolean;
+  showCargo: boolean;
+  requireCargo: boolean;
+  showConsent: boolean;
+  title: string;
+  description: string;
+  consentText: string;
+}
+
+export interface PlayerRegistration {
+  id: string;
+  playerName: string;
+  email: string;
+  phone: string;
+  company: string;
+  cargo: string;
+  consentGiven: boolean;
+  createdAt: string;
+  gamesPlayed: number;
+  bestScore: number;
+  bestReactionMs: number;
+}
+
 export interface AppAdminSettings {
   passwordHash: string; // Master administrator password
   lockEntireAppWithPassword: boolean; // Require password to access and play the game
@@ -42,6 +87,9 @@ export interface AppAdminSettings {
   customLevelConfigs: Record<number, Partial<LevelConfig>>;
   tournamentMode: boolean; // Strict tournament mode: disables dev cheats
   adminDisplayName: string;
+  branding: BrandingColorsConfig;
+  logo: CompanyLogoConfig;
+  registration: RegistrationFormConfig;
 }
 
 export interface TargetFigureData {

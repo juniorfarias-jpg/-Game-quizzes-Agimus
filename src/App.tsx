@@ -9,7 +9,9 @@ import {
   PrizeReward,
   CustomTargetImageConfig,
   DevControlOverrides,
-  AppAdminSettings
+  AppAdminSettings,
+  PlayerRegistration,
+  RegistrationFormConfig
 } from './types/game';
 import { LEVELS, calculateTier, calculateStars, getMergedLevels } from './utils/levels';
 import { sound } from './utils/sound';
@@ -31,6 +33,18 @@ import {
   loadAdminSettings, 
   saveAdminSettings 
 } from './utils/adminStorage';
+import { 
+  subscribeToCloudSettings, 
+  saveAdminSettingsToCloud, 
+  subscribeToCloudLeaderboard, 
+  submitLeaderboardCloud, 
+  deleteLeaderboardEntryCloud, 
+  clearAllLeaderboardCloud, 
+  loadAllRegistrations, 
+  saveRegistration, 
+  deleteRegistration, 
+  clearAllRegistrations 
+} from './services/firestoreSync';
 import { Navbar } from './components/Navbar';
 import { Arena } from './components/Arena';
 import { LevelSelect } from './components/LevelSelect';
@@ -41,7 +55,8 @@ import { ReflexCertificateModal } from './components/ReflexCertificateModal';
 import { HiddenControlPanel } from './components/HiddenControlPanel';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
-import { Sliders, ShieldCheck, Lock } from 'lucide-react';
+import { RegistrationModal } from './components/RegistrationModal';
+import { Sliders, ShieldCheck, Lock, UserPlus } from 'lucide-react';
 
 const CUSTOM_IMAGE_STORAGE_KEY = 'neuroreflex_custom_image_v1';
 
@@ -49,7 +64,7 @@ const DEFAULT_CUSTOM_IMAGE: CustomTargetImageConfig = {
   enabled: false,
   imageUrl: '',
   shapeFit: 'cover',
-  customBorderColor: '#22d3ee',
+  customBorderColor: '#00d2ff',
 };
 
 const DEFAULT_DEV_OVERRIDES: DevControlOverrides = {
@@ -71,11 +86,16 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [arenaKey, setArenaKey] = useState<number>(1);
 
-  // Admin and Master Settings
+  // Admin and Master Settings (syncs with Firestore Cloud)
   const [adminSettings, setAdminSettings] = useState<AppAdminSettings>(loadAdminSettings);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
   const [showAdminDashboardModal, setShowAdminDashboardModal] = useState<boolean>(false);
+
+  // Registrations (Leads for Kiosk Mode)
+  const [registrations, setRegistrations] = useState<PlayerRegistration[]>([]);
+  const [showRegistrationModal, setShowRegistrationModal] = useState<boolean>(false);
+  const [hasRegisteredThisSession, setHasRegisteredThisSession] = useState<boolean>(false);
 
   // Hidden Control Panel & Custom Image states
   const [isControlPanelOpen, setIsControlPanelOpen] = useState<boolean>(false);
@@ -104,10 +124,36 @@ export default function App() {
     records: HitRecord[];
   } | null>(null);
 
-  // Global Keyboard Listener for ALT + C Shortcut
+  // 1. Subscribe to Cloud Settings for Real-Time Multi-Device Sync
+  useEffect(() => {
+    const unsubscribe = subscribeToCloudSettings((cloudSettings) => {
+      setAdminSettings(cloudSettings);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Subscribe to Cloud Leaderboard for Real-Time Multi-Device Ranking
+  useEffect(() => {
+    const unsubscribe = subscribeToCloudLeaderboard((cloudEntries) => {
+      if (cloudEntries && cloudEntries.length > 0) {
+        setLeaderboard(cloudEntries);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 3. Load Registrations from Firestore
+  useEffect(() => {
+    loadAllRegistrations().then((list) => {
+      if (list && list.length > 0) {
+        setRegistrations(list);
+      }
+    });
+  }, []);
+
+  // 4. Global Keyboard Listener for ALT + C Shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Alt + C (or option + C on Mac)
       if (e.altKey && (e.key === 'c' || e.key === 'C' || e.code === 'KeyC')) {
         e.preventDefault();
         if (isAdminLoggedIn) {
@@ -121,6 +167,16 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAdminLoggedIn]);
+
+  // 5. Prompt registration before playing if required by Admin
+  useEffect(() => {
+    if (adminSettings.registration.enabled && !hasRegisteredThisSession && activeTab === 'arena') {
+      const timer = setTimeout(() => {
+        setShowRegistrationModal(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [adminSettings.registration.enabled, hasRegisteredThisSession, activeTab]);
 
   // Handle Admin Open
   const handleOpenAdmin = () => {
@@ -142,21 +198,56 @@ export default function App() {
     setShowAdminDashboardModal(false);
   };
 
-  const handleSaveAdminSettings = (newSettings: AppAdminSettings) => {
+  const handleSaveAdminSettings = async (newSettings: AppAdminSettings) => {
     setAdminSettings(newSettings);
-    saveAdminSettings(newSettings);
-    setArenaKey((k) => k + 1); // reload arena with customized levels
+    await saveAdminSettingsToCloud(newSettings);
+    setArenaKey((k) => k + 1);
+  };
+
+  // Registration Handlers
+  const handleCompleteRegistration = async (newReg: PlayerRegistration) => {
+    setHasRegisteredThisSession(true);
+    setShowRegistrationModal(false);
+    setPlayerStats((prev) => {
+      const updated = { ...prev, playerName: newReg.playerName };
+      savePlayerStats(updated);
+      return updated;
+    });
+
+    setRegistrations((prev) => [newReg, ...prev]);
+    await saveRegistration(newReg);
+  };
+
+  const handleSaveRegistrationConfig = async (newConfig: RegistrationFormConfig) => {
+    const updatedSettings: AppAdminSettings = {
+      ...adminSettings,
+      registration: newConfig,
+    };
+    setAdminSettings(updatedSettings);
+    await saveAdminSettingsToCloud(updatedSettings);
+  };
+
+  const handleDeleteRegistration = async (id: string) => {
+    setRegistrations((prev) => prev.filter((r) => r.id !== id));
+    await deleteRegistration(id);
+  };
+
+  const handleClearRegistrations = async () => {
+    setRegistrations([]);
+    await clearAllRegistrations();
   };
 
   // Leaderboard Admin Operations
-  const handleDeleteLeaderboardEntry = (id: string) => {
+  const handleDeleteLeaderboardEntry = async (id: string) => {
     const updated = deleteLeaderboardEntry(id);
     setLeaderboard(updated);
+    await deleteLeaderboardEntryCloud(id);
   };
 
-  const handleClearLeaderboard = () => {
+  const handleClearLeaderboard = async () => {
     const updated = clearAllLeaderboard();
     setLeaderboard(updated);
+    await clearAllLeaderboardCloud();
   };
 
   const handleRestoreLeaderboard = () => {
@@ -184,12 +275,20 @@ export default function App() {
 
   // Restart current stage
   const handleRestartArena = () => {
+    if (adminSettings.registration.enabled && !hasRegisteredThisSession) {
+      setShowRegistrationModal(true);
+      return;
+    }
     setShowResultModal(false);
     setArenaKey((k) => k + 1);
   };
 
   // Select level from Levels tab
   const handleSelectLevel = (levelId: number) => {
+    if (adminSettings.registration.enabled && !hasRegisteredThisSession) {
+      setShowRegistrationModal(true);
+      return;
+    }
     setCurrentLevelId(levelId);
     setActiveTab('arena');
     setShowResultModal(false);
@@ -295,8 +394,8 @@ export default function App() {
     });
   }, []);
 
-  // Submit score to Leaderboard
-  const handleSubmitScore = (playerName: string, country: string) => {
+  // Submit score to Leaderboard (Local and Cloud)
+  const handleSubmitScore = async (playerName: string, country: string) => {
     if (!lastStageStats) return;
 
     // Update player profile
@@ -308,7 +407,8 @@ export default function App() {
 
     const tier = calculateTier(lastStageStats.averageMs, lastStageStats.accuracy);
 
-    const updatedLeaderboard = saveLeaderboardEntry({
+    const newEntry: LeaderboardEntry = {
+      id: `lead-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       playerName,
       country,
       avatar: playerStats.avatar,
@@ -319,9 +419,12 @@ export default function App() {
       levelId: lastStageStats.levelId,
       tier,
       date: new Date().toISOString().split('T')[0],
-    });
+      isUser: true,
+    };
 
+    const updatedLeaderboard = saveLeaderboardEntry(newEntry);
     setLeaderboard(updatedLeaderboard);
+    await submitLeaderboardCloud(newEntry);
   };
 
   // Equip crosshair
@@ -396,10 +499,20 @@ export default function App() {
 
   // Check if App is Locked behind Kiosk Mode
   const isAppLocked = adminSettings.lockEntireAppWithPassword && !isAdminLoggedIn;
+  const primaryColor = adminSettings.branding.primaryColor || '#00d2ff';
+  const secondaryColor = adminSettings.branding.secondaryColor || '#6366f1';
+  const bgColor = adminSettings.branding.backgroundColor || '#090d16';
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Navbar */}
+    <div 
+      className="min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-cyan-500 selection:text-black"
+      style={{
+        backgroundColor: bgColor,
+        ['--theme-primary' as string]: primaryColor,
+        ['--theme-secondary' as string]: secondaryColor,
+      }}
+    >
+      {/* Navbar with dynamic logo and colors */}
       <Navbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -409,6 +522,9 @@ export default function App() {
         onOpenAdmin={handleOpenAdmin}
         onToggleSound={handleToggleSound}
         onOpenCertificate={() => setShowCertificateModal(true)}
+        logo={adminSettings.logo}
+        branding={adminSettings.branding}
+        onOpenRegistration={() => setShowRegistrationModal(true)}
       />
 
       {/* Main Content Area */}
@@ -439,7 +555,14 @@ export default function App() {
                   {currentLevel.name}
                 </span>
                 {adminSettings.customLevelConfigs[currentLevel.id] && (
-                  <span className="px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-800 text-[10px] font-mono-code font-bold text-cyan-300">
+                  <span 
+                    className="px-1.5 py-0.2 rounded border text-[10px] font-mono-code font-bold uppercase"
+                    style={{
+                      borderColor: primaryColor,
+                      color: primaryColor,
+                      backgroundColor: `${primaryColor}20`,
+                    }}
+                  >
                     MODIFICADA PELO ADMIN
                   </span>
                 )}
@@ -453,18 +576,21 @@ export default function App() {
                       playerStats.levelProgress[lvl.unlockRequirements.prevLevelId]?.stars >=
                         lvl.unlockRequirements.minStars);
 
+                  const isCurrent = lvl.id === currentLevelId;
+
                   return (
                     <button
                       key={lvl.id}
                       onClick={() => isUnlocked && handleSelectLevel(lvl.id)}
                       disabled={!isUnlocked}
                       className={`w-7 h-7 rounded-lg text-xs font-bold font-display transition ${
-                        lvl.id === currentLevelId
-                          ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_#22d3ee]'
+                        isCurrent
+                          ? 'text-slate-950 shadow-md font-black'
                           : isUnlocked
                           ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                           : 'bg-slate-950 text-slate-700 cursor-not-allowed border border-slate-900'
                       }`}
+                      style={isCurrent ? { backgroundColor: primaryColor } : undefined}
                     >
                       {lvl.id}
                     </button>
@@ -476,7 +602,7 @@ export default function App() {
             {/* Admin & Secret Shortcut Callout */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 font-mono-code px-2">
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                <ShieldCheck className="w-3.5 h-3.5" style={{ color: primaryColor }} />
                 <span>Painel Administrador:</span>
                 <span>Pressione</span>
                 <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">ALT</kbd>
@@ -485,13 +611,25 @@ export default function App() {
                 <span>para abrir com senha.</span>
               </span>
 
-              <button
-                onClick={handleOpenAdmin}
-                className="text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1"
-              >
-                <Sliders className="w-3 h-3" />
-                <span>{isAdminLoggedIn ? 'Configurar Modo Admin' : 'Entrar com Senha'}</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowRegistrationModal(true)}
+                  className="hover:underline flex items-center gap-1"
+                  style={{ color: primaryColor }}
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span>Ficha de Inscrição</span>
+                </button>
+
+                <button
+                  onClick={handleOpenAdmin}
+                  className="hover:underline flex items-center gap-1"
+                  style={{ color: primaryColor }}
+                >
+                  <Sliders className="w-3 h-3" />
+                  <span>{isAdminLoggedIn ? 'Configurar Modo Admin' : 'Entrar com Senha'}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -567,6 +705,23 @@ export default function App() {
         onOpenAdmin={handleOpenAdmin}
       />
 
+      {/* Registration Modal with Inscrição, Configurar Formulário & Leads tabs */}
+      <RegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        config={adminSettings.registration}
+        onSaveConfig={handleSaveRegistrationConfig}
+        logo={adminSettings.logo}
+        branding={adminSettings.branding}
+        initialPlayerName={playerStats.playerName}
+        onCompleteRegistration={handleCompleteRegistration}
+        registrations={registrations}
+        onDeleteRegistration={handleDeleteRegistration}
+        onClearRegistrations={handleClearRegistrations}
+        isAdminLoggedIn={isAdminLoggedIn}
+        onOpenAdminLogin={() => setShowAdminLoginModal(true)}
+      />
+
       {/* Admin Login Modal (Triggered via ALT+C or Admin Button) */}
       <AdminLoginModal
         isOpen={showAdminLoginModal || isAppLocked}
@@ -592,6 +747,9 @@ export default function App() {
         onDeleteLeaderboardEntry={handleDeleteLeaderboardEntry}
         onClearLeaderboard={handleClearLeaderboard}
         onRestoreLeaderboard={handleRestoreLeaderboard}
+        registrations={registrations}
+        onDeleteRegistration={handleDeleteRegistration}
+        onClearRegistrations={handleClearRegistrations}
       />
     </div>
   );

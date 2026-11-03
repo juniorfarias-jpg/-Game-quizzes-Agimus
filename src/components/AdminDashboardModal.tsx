@@ -1,12 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   AppAdminSettings, 
   LevelConfig, 
   CustomTargetImageConfig, 
-  LeaderboardEntry 
+  LeaderboardEntry,
+  PlayerRegistration,
+  BrandingColorsConfig,
+  CompanyLogoConfig,
+  RegistrationFormConfig
 } from '../types/game';
 import { LEVELS } from '../utils/levels';
 import { updateAdminPassword } from '../utils/adminStorage';
+import { THEME_PRESETS } from '../utils/brandingPresets';
 import { 
   ShieldCheck, 
   Settings, 
@@ -27,7 +32,16 @@ import {
   Upload, 
   Link as LinkIcon, 
   AlertTriangle,
-  Sparkles 
+  Sparkles,
+  Palette,
+  Users,
+  Download,
+  Building,
+  Mail,
+  Phone,
+  Briefcase,
+  FileSpreadsheet,
+  CheckCircle2
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -40,6 +54,9 @@ interface AdminDashboardModalProps {
   onDeleteLeaderboardEntry: (id: string) => void;
   onClearLeaderboard: () => void;
   onRestoreLeaderboard: () => void;
+  registrations?: PlayerRegistration[];
+  onDeleteRegistration?: (id: string) => void;
+  onClearRegistrations?: () => void;
 }
 
 export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
@@ -52,10 +69,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onDeleteLeaderboardEntry,
   onClearLeaderboard,
   onRestoreLeaderboard,
+  registrations = [],
+  onDeleteRegistration,
+  onClearRegistrations,
 }) => {
-  const [activeTab, setActiveTab] = useState<'levels' | 'image' | 'leaderboard' | 'security'>('levels');
+  const [activeTab, setActiveTab] = useState<'branding' | 'registration' | 'levels' | 'image' | 'leaderboard' | 'security'>('branding');
   const [settingsDraft, setSettingsDraft] = useState<AppAdminSettings>(adminSettings);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Sync draft whenever adminSettings changes (e.g. from cloud)
+  useEffect(() => {
+    setSettingsDraft(adminSettings);
+  }, [adminSettings]);
 
   // Password change form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -65,19 +90,41 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
 
+  // Target image file input
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [urlInput, setUrlInput] = useState('');
+
+  // Logo file input
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoUrlInput, setLogoUrlInput] = useState('');
 
   if (!isOpen) return null;
 
   const showToast = (msg: string) => {
     setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3500);
   };
 
   const handleSaveAll = () => {
     onSaveAdminSettings(settingsDraft);
-    showToast('Configurações salvas e aplicadas em todo o aplicativo!');
+    showToast('Configurações salvas e sincronizadas na nuvem em tempo real!');
+  };
+
+  // Preset theme selector
+  const handleApplyPreset = (presetId: BrandingColorsConfig['themePreset']) => {
+    const preset = THEME_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSettingsDraft((prev) => ({
+      ...prev,
+      branding: {
+        ...prev.branding,
+        themePreset: preset.id,
+        primaryColor: preset.primary,
+        secondaryColor: preset.secondary,
+        backgroundColor: preset.background,
+      },
+    }));
+    showToast(`Tema visual "${preset.name}" aplicado!`);
   };
 
   // Level config updater
@@ -105,7 +152,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       delete updatedConfigs[levelId];
       return { ...prev, customLevelConfigs: updatedConfigs };
     });
-    showToast(`Fase ${levelId} restaurada para os valores padrão de fábrica.`);
+    showToast(`Fase ${levelId} restaurada para os valores padrão.`);
   };
 
   // Change Admin Password handler
@@ -130,8 +177,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
 
     updateAdminPassword(newPassword);
-    setSettingsDraft((prev) => ({ ...prev, passwordHash: newPassword }));
-    onSaveAdminSettings({ ...adminSettings, passwordHash: newPassword });
+    const updated = { ...settingsDraft, passwordHash: newPassword };
+    setSettingsDraft(updated);
+    onSaveAdminSettings(updated);
     setPasswordSuccess(true);
     setCurrentPassword('');
     setNewPassword('');
@@ -183,14 +231,89 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
   };
 
+  // Logo file upload handler
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setSettingsDraft((prev) => ({
+          ...prev,
+          logo: {
+            ...prev.logo,
+            enabled: true,
+            logoUrl: result,
+          },
+        }));
+        showToast('Logotipo da empresa carregado!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyLogoUrl = () => {
+    if (!logoUrlInput.trim()) return;
+    try {
+      new URL(logoUrlInput);
+      setSettingsDraft((prev) => ({
+        ...prev,
+        logo: {
+          ...prev.logo,
+          enabled: true,
+          logoUrl: logoUrlInput.trim(),
+        },
+      }));
+      setLogoUrlInput('');
+      showToast('URL do Logotipo aplicada!');
+    } catch {
+      showToast('URL do Logotipo inválida.');
+    }
+  };
+
+  // Export registrations as CSV
+  const handleExportCSV = () => {
+    if (registrations.length === 0) return;
+
+    const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'Data de Inscrição', 'Pontuação Máxima', 'Melhor Tempo (ms)'];
+    const rows = registrations.map((r) => [
+      r.id,
+      `"${r.playerName.replace(/"/g, '""')}"`,
+      `"${r.email.replace(/"/g, '""')}"`,
+      `"${r.phone.replace(/"/g, '""')}"`,
+      `"${r.company.replace(/"/g, '""')}"`,
+      `"${r.cargo.replace(/"/g, '""')}"`,
+      `"${new Date(r.createdAt).toLocaleString('pt-PT')}"`,
+      r.bestScore || 0,
+      r.bestReactionMs || 0,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `leads_quiosque_agimus_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md">
-      <div className="relative w-full max-w-4xl bg-[#090e1a] border-2 border-cyan-500/60 rounded-2xl shadow-[0_0_50px_rgba(34,211,238,0.25)] flex flex-col max-h-[92vh] overflow-hidden">
+      <div 
+        className="relative w-full max-w-5xl bg-[#090e1a] border-2 rounded-2xl shadow-[0_0_50px_rgba(0,210,255,0.25)] flex flex-col max-h-[92vh] overflow-hidden"
+        style={{ borderColor: `${settingsDraft.branding.primaryColor}88` }}
+      >
         {/* Top Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.4)]">
-              <ShieldCheck className="w-6 h-6 text-white" />
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+              style={{ backgroundColor: settingsDraft.branding.primaryColor }}
+            >
+              <ShieldCheck className="w-6 h-6 text-slate-950" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -198,11 +321,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   Central do Modo Administrador
                 </h2>
                 <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/60 text-[10px] font-mono-code font-bold text-emerald-400">
-                  ADMIN ATIVO
+                  NUVEM SINCRONIZADA
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Configuração mestre das fases, imagem dos alvos, ranking global e segurança.
+                Personalização de cores, logotipo da empresa, cadastro de leads, fases e banco de dados.
               </p>
             </div>
           </div>
@@ -210,23 +333,27 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveAll}
-              className="px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition shadow-[0_0_12px_rgba(34,211,238,0.3)] active:scale-95"
+              className="px-4 py-2 flex items-center gap-1.5 text-xs font-bold text-white rounded-lg transition shadow-md active:scale-95"
+              style={{
+                backgroundColor: settingsDraft.branding.primaryColor,
+                boxShadow: `0 0 15px ${settingsDraft.branding.primaryColor}55`,
+              }}
             >
-              <Save className="w-3.5 h-3.5" />
-              Salvar Alterações
+              <Save className="w-3.5 h-3.5 text-slate-950" />
+              <span className="text-slate-950 font-bold">Salvar na Nuvem</span>
             </button>
 
             <button
               onClick={onLogout}
-              className="px-3 py-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 rounded-lg transition"
+              className="px-3 py-2 text-xs font-semibold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 rounded-lg transition"
               title="Sair do Modo Administrador"
             >
-              Sair (Logout)
+              Sair
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
+              className="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -236,13 +363,37 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         {/* Notification Toast */}
         {notification && (
           <div className="mx-4 mt-3 p-2.5 bg-emerald-950/90 border border-emerald-500/60 rounded-xl text-xs text-emerald-300 flex items-center gap-2 animate-pulse">
-            <Check className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{notification}</span>
           </div>
         )}
 
         {/* Tab Navigation */}
-        <div className="px-4 pt-3 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto">
+        <div className="px-4 pt-3 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto bg-slate-950/40">
+          <button
+            onClick={() => setActiveTab('branding')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'branding'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Palette className="w-4 h-4" />
+            <span>Cores & Logotipo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('registration')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'registration'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Inscrição & Leads ({registrations.length})</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('levels')}
             className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
@@ -264,7 +415,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <ImageIcon className="w-4 h-4" />
-            <span>Imagem Global do Alvo</span>
+            <span>Imagem do Alvo</span>
           </button>
 
           <button
@@ -288,13 +439,672 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Key className="w-4 h-4" />
-            <span>Segurança & Senha Mestra</span>
+            <span>Segurança & Senha</span>
           </button>
         </div>
 
-        {/* Tab Contents (Scrollable) */}
+        {/* Tab Contents */}
         <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6">
-          {/* TAB 1: Editor de Fases */}
+          {/* TAB 1: CORES & LOGOTIPO DA EMPRESA */}
+          {activeTab === 'branding' && (
+            <div className="space-y-6">
+              {/* Theme presets */}
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider font-display mb-1 flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-cyan-400" />
+                  <span>Paletas de Cores Prontas (Presets de Marca)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">
+                  Escolha um tema ou personalize livremente as cores hexadecimais para coincidir com a identidade da sua empresa.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {THEME_PRESETS.map((p) => {
+                    const isSelected = settingsDraft.branding.themePreset === p.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleApplyPreset(p.id)}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-slate-900 border-2 shadow-lg scale-[1.02]'
+                            : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/50'
+                        }`}
+                        style={{
+                          borderColor: isSelected ? p.primary : undefined,
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-white font-display">
+                            {p.name}
+                          </span>
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold uppercase"
+                            style={{ backgroundColor: `${p.primary}33`, color: p.primary }}
+                          >
+                            {p.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mb-3">{p.description}</p>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-5 h-5 rounded-md border border-white/20 shadow-sm"
+                            style={{ backgroundColor: p.primary }}
+                            title="Cor Primária"
+                          />
+                          <div
+                            className="w-5 h-5 rounded-md border border-white/20 shadow-sm"
+                            style={{ backgroundColor: p.secondary }}
+                            title="Cor Secundária"
+                          />
+                          <div
+                            className="w-5 h-5 rounded-md border border-white/20 shadow-sm"
+                            style={{ backgroundColor: p.background }}
+                            title="Cor de Fundo"
+                          />
+                          {isSelected && (
+                            <span className="ml-auto text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                              <Check className="w-3 h-3" /> ATIVO
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Color Pickers */}
+              <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                  Cores Personalizadas (Hexadecimal)
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Primary Color */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                      Cor Primária (Botões, Destaques):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settingsDraft.branding.primaryColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              primaryColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                      />
+                      <input
+                        type="text"
+                        value={settingsDraft.branding.primaryColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              primaryColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono-code"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Secondary Color */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                      Cor Secundária (Bordas, Gradientes):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settingsDraft.branding.secondaryColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              secondaryColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                      />
+                      <input
+                        type="text"
+                        value={settingsDraft.branding.secondaryColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              secondaryColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono-code"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Background Color */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                      Cor de Fundo da Aplicação:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settingsDraft.branding.backgroundColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              backgroundColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                      />
+                      <input
+                        type="text"
+                        value={settingsDraft.branding.backgroundColor}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              backgroundColor: e.target.value,
+                              themePreset: 'custom',
+                            },
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono-code"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* COMPANY LOGO SECTION */}
+              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-cyan-400" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Logotipo da Empresa & Marca no Topo
+                    </h4>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <span>Exibir Logo no Cabeçalho:</span>
+                    <input
+                      type="checkbox"
+                      checked={settingsDraft.logo.enabled}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          logo: { ...prev.logo, enabled: e.target.checked },
+                        }))
+                      }
+                      className="w-4 h-4 accent-cyan-400 cursor-pointer"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Nome da Empresa / Marca:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.logo.companyName}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          logo: { ...prev.logo, companyName: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: AGIMUS"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white font-display"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Subtítulo / Descrição Curta:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.logo.subTitle || ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          logo: { ...prev.logo, subTitle: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: QUIOSQUE OFICIAL"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Logo Preview and Actions */}
+                <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-14 bg-slate-900 border border-slate-700 rounded-lg flex items-center justify-center p-1 overflow-hidden">
+                      {settingsDraft.logo.logoUrl ? (
+                        <img
+                          src={settingsDraft.logo.logoUrl}
+                          alt="Logo Preview"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-[9px] text-slate-500 font-mono-code text-center">
+                          Sem Logo
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Visualização do Logotipo</div>
+                      <div className="text-[11px] text-slate-400">
+                        {settingsDraft.logo.logoUrl ? 'Imagem carregada' : 'Usando badge textual padrão'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {settingsDraft.logo.logoUrl && (
+                    <button
+                      onClick={() =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          logo: { ...prev.logo, logoUrl: '' },
+                        }))
+                      }
+                      className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Remover Logo
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload or Link for Logo */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="w-full py-2 px-3 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Upload do Arquivo do Logo</span>
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={logoUrlInput}
+                      onChange={(e) => setLogoUrlInput(e.target.value)}
+                      placeholder="Ou cole a URL do Logo..."
+                      className="flex-1 px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                    <button
+                      onClick={handleApplyLogoUrl}
+                      className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: INSCRIÇÕES & FORMULÁRIO DE LEADS */}
+          {activeTab === 'registration' && (
+            <div className="space-y-6">
+              {/* Gate toggle */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-cyan-400" />
+                    <span>Exigir Cadastro de Jogador Antes de Iniciar a Partida</span>
+                    {settingsDraft.registration.enabled && (
+                      <span className="px-1.5 py-0.2 bg-cyan-400 text-slate-950 text-[9px] font-bold rounded">
+                        ATIVO NO QUIOSQUE
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Quando ativado, cada participante deve preencher o formulário antes de jogar.
+                  </div>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={settingsDraft.registration.enabled}
+                  onChange={(e) =>
+                    setSettingsDraft((prev) => ({
+                      ...prev,
+                      registration: { ...prev.registration, enabled: e.target.checked },
+                    }))
+                  }
+                  className="w-5 h-5 accent-cyan-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Form config settings */}
+              <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                  Configuração dos Textos e Campos do Formulário
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Título do Formulário:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.registration.title}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          registration: { ...prev.registration, title: e.target.value },
+                        }))
+                      }
+                      className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Subtítulo / Instrução:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.registration.description}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          registration: { ...prev.registration, description: e.target.value },
+                        }))
+                      }
+                      className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Fields toggle grid */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="text-[11px] font-bold text-slate-300 uppercase">
+                    Campos Habilitados no Cadastro
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-900 text-xs">
+                    <span className="text-slate-300">E-mail corporativo / pessoal</span>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.showEmail}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, showEmail: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Exibir</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.requireEmail}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, requireEmail: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Obrigatório</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-900 text-xs">
+                    <span className="text-slate-300">Telefone / WhatsApp</span>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.showPhone}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, showPhone: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Exibir</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.requirePhone}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, requirePhone: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Obrigatório</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Company */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-900 text-xs">
+                    <span className="text-slate-300">Empresa / Organização</span>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.showCompany}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, showCompany: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Exibir</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.requireCompany}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, requireCompany: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Obrigatório</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Cargo */}
+                  <div className="flex items-center justify-between py-1 text-xs">
+                    <span className="text-slate-300">Cargo / Função</span>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.showCargo}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, showCargo: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Exibir</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.registration.requireCargo}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              registration: { ...prev.registration, requireCargo: e.target.checked },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Obrigatório</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Collected Leads Table */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Leads e Participantes Coletados ({registrations.length})
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Sincronizados na base de dados na nuvem para download e acompanhamento.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportCSV}
+                      disabled={registrations.length === 0}
+                      className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg flex items-center gap-1.5 transition disabled:opacity-40"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Exportar CSV</span>
+                    </button>
+
+                    {onClearRegistrations && (
+                      <button
+                        onClick={() => {
+                          if (confirm('Deseja excluir todos os leads gravados?')) {
+                            onClearRegistrations();
+                            showToast('Lista de participantes zerada.');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 text-xs text-rose-300 bg-rose-950/70 border border-rose-800 rounded-lg hover:bg-rose-900"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/70">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 font-mono-code uppercase text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3">Nome</th>
+                        <th className="py-2.5 px-3">Contato</th>
+                        <th className="py-2.5 px-3">Empresa / Cargo</th>
+                        <th className="py-2.5 px-3 text-right">Data</th>
+                        {onDeleteRegistration && <th className="py-2.5 px-3 text-center">Ação</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {registrations.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-slate-500">
+                            Nenhum participante registrado até o momento.
+                          </td>
+                        </tr>
+                      ) : (
+                        registrations.map((r) => (
+                          <tr key={r.id} className="hover:bg-slate-900/50">
+                            <td className="py-2 px-3 font-semibold text-white">
+                              {r.playerName}
+                            </td>
+                            <td className="py-2 px-3 text-slate-300 font-mono-code text-[11px]">
+                              {r.email && <div>{r.email}</div>}
+                              {r.phone && <div className="text-slate-400">{r.phone}</div>}
+                            </td>
+                            <td className="py-2 px-3 text-slate-300">
+                              {r.company && <div>{r.company}</div>}
+                              {r.cargo && <div className="text-slate-400 text-[11px]">{r.cargo}</div>}
+                            </td>
+                            <td className="py-2 px-3 text-right text-slate-400 font-mono-code text-[11px]">
+                              {new Date(r.createdAt).toLocaleDateString('pt-PT')}
+                            </td>
+                            {onDeleteRegistration && (
+                              <td className="py-2 px-3 text-center">
+                                <button
+                                  onClick={() => {
+                                    onDeleteRegistration(r.id);
+                                    showToast(`Participante ${r.playerName} removido.`);
+                                  }}
+                                  className="p-1 text-rose-400 hover:text-rose-200"
+                                  title="Remover"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Editor de Fases */}
           {activeTab === 'levels' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -457,7 +1267,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: Imagem Global do Alvo */}
+          {/* TAB 4: Imagem Global do Alvo */}
           {activeTab === 'image' && (
             <div className="space-y-5">
               <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-between">
@@ -585,7 +1395,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: Gestão do Ranking */}
+          {/* TAB 5: Gestão do Ranking */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -688,7 +1498,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: Segurança & Senha Mestra */}
+          {/* TAB 6: Segurança & Senha Mestra */}
           {activeTab === 'security' && (
             <div className="space-y-5">
               {/* Lock Entire App with Password */}
@@ -842,7 +1652,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </button>
             <button
               onClick={handleSaveAll}
-              className="px-5 py-2 font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded-xl transition shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+              className="px-5 py-2 font-bold text-slate-950 rounded-xl transition shadow-lg active:scale-95"
+              style={{
+                backgroundColor: settingsDraft.branding.primaryColor,
+                boxShadow: `0 0 15px ${settingsDraft.branding.primaryColor}55`,
+              }}
             >
               Salvar Tudo
             </button>
