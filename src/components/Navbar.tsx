@@ -86,65 +86,67 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Primary Navigation Tabs */}
-        <nav className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl">
-          <button
-            onClick={() => onSelectTab('arena')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'arena'
-                ? 'text-slate-950 shadow font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            style={activeTab === 'arena' ? { backgroundColor: primaryColor } : undefined}
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span className="hidden sm:inline">Jogar</span>
-          </button>
+        {/* Primary Navigation Tabs (Only visible when Admin is logged in, keeping clean kiosk view for players) */}
+        {isAdminLoggedIn && (
+          <nav className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl">
+            <button
+              onClick={() => onSelectTab('arena')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                activeTab === 'arena'
+                  ? 'text-slate-950 shadow font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              style={activeTab === 'arena' ? { backgroundColor: primaryColor } : undefined}
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span className="hidden sm:inline">Jogar</span>
+            </button>
 
-          <button
-            onClick={() => onSelectTab('levels')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'levels'
-                ? 'text-slate-950 shadow font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            style={activeTab === 'levels' ? { backgroundColor: primaryColor } : undefined}
-          >
-            <Crosshair className="w-3.5 h-3.5" />
-            <span>Fases</span>
-          </button>
+            <button
+              onClick={() => onSelectTab('levels')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                activeTab === 'levels'
+                  ? 'text-slate-950 shadow font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              style={activeTab === 'levels' ? { backgroundColor: primaryColor } : undefined}
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              <span>Fases</span>
+            </button>
 
-          <button
-            onClick={() => onSelectTab('leaderboard')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'leaderboard'
-                ? 'text-slate-950 shadow font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            style={activeTab === 'leaderboard' ? { backgroundColor: primaryColor } : undefined}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Ranking</span>
-          </button>
+            <button
+              onClick={() => onSelectTab('leaderboard')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                activeTab === 'leaderboard'
+                  ? 'text-slate-950 shadow font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              style={activeTab === 'leaderboard' ? { backgroundColor: primaryColor } : undefined}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Ranking</span>
+            </button>
 
-          <button
-            onClick={() => onSelectTab('gallery')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'gallery'
-                ? 'text-slate-950 shadow font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            style={activeTab === 'gallery' ? { backgroundColor: primaryColor } : undefined}
-          >
-            <Trophy className="w-3.5 h-3.5" />
-            <span>Prêmios</span>
-          </button>
-        </nav>
+            <button
+              onClick={() => onSelectTab('gallery')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                activeTab === 'gallery'
+                  ? 'text-slate-950 shadow font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              style={activeTab === 'gallery' ? { backgroundColor: primaryColor } : undefined}
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Prêmios</span>
+            </button>
+          </nav>
+        )}
 
         {/* Right Status / Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quick Registration Button */}
-          {onOpenRegistration && (
+          {/* Quick Registration Button (Only when Admin is logged in) */}
+          {isAdminLoggedIn && onOpenRegistration && (
             <button
               onClick={onOpenRegistration}
               className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-700 transition"
@@ -178,21 +180,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Admin Mode Lock Button */}
-          <button
-            onClick={onOpenAdmin}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-              isAdminLoggedIn
-                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40'
-            }`}
-            title={isAdminLoggedIn ? 'Modo Administrador Ativo (Clique para abrir painel)' : 'Modo Administrador (ALT+C)'}
-          >
-            <ShieldCheck className={`w-3.5 h-3.5 ${isAdminLoggedIn ? 'text-emerald-400' : 'text-slate-400'}`} />
-            <span className="font-mono-code font-bold text-[11px] hidden sm:inline">
-              ADMIN
-            </span>
-          </button>
+          {/* Admin Mode Button (Only visible if Admin is logged in) */}
+          {isAdminLoggedIn && (
+            <button
+              onClick={onOpenAdmin}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition"
+              title="Modo Administrador Ativo (Clique para abrir painel)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-mono-code font-bold text-[11px] hidden sm:inline">
+                ADMIN
+              </span>
+            </button>
+          )}
 
           {/* Player Badge */}
           <div 

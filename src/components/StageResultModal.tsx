@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { LevelConfig, HitRecord, DifficultyTier, PrizeReward } from '../types/game';
+import { LevelConfig, HitRecord, DifficultyTier, PrizeReward, EndGameImageConfig, BrandingColorsConfig } from '../types/game';
 import { calculateTier, calculateStars } from '../utils/levels';
 import { sound } from '../utils/sound';
 import { 
@@ -13,7 +13,8 @@ import {
   Award, 
   Globe, 
   CheckCircle2, 
-  Sparkles 
+  Sparkles,
+  Play
 } from 'lucide-react';
 
 interface StageResultModalProps {
@@ -36,6 +37,8 @@ interface StageResultModalProps {
   onSubmitScore: (playerName: string, country: string) => void;
   defaultPlayerName: string;
   defaultCountry: string;
+  endGameImage?: EndGameImageConfig;
+  branding?: BrandingColorsConfig;
 }
 
 export const StageResultModal: React.FC<StageResultModalProps> = ({
@@ -48,6 +51,8 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
   onSubmitScore,
   defaultPlayerName,
   defaultCountry,
+  endGameImage,
+  branding,
 }) => {
   const tier = calculateTier(stats.averageMs, stats.accuracy);
   const stars = calculateStars(tier);
@@ -121,6 +126,38 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
         {/* Glow backdrop */}
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* End Game Custom Image Banner (Configured by Administrator) */}
+        {endGameImage?.enabled && endGameImage?.imageUrl && (
+          <div className="mb-6 relative rounded-2xl overflow-hidden border-2 bg-slate-950/90 shadow-2xl transition-all"
+            style={{
+              borderColor: `${branding?.primaryColor || '#00d2ff'}88`,
+              boxShadow: `0 0 35px ${branding?.primaryColor || '#00d2ff'}33`,
+            }}
+          >
+            <div className="w-full max-h-56 overflow-hidden flex items-center justify-center bg-slate-950">
+              <img
+                src={endGameImage.imageUrl}
+                alt={endGameImage.imageName || 'Fim de Jogo'}
+                className="w-full h-auto max-h-56 object-contain"
+              />
+            </div>
+            {(endGameImage.headline || endGameImage.subheadline) && (
+              <div className="p-3 text-center bg-slate-950/80 border-t border-slate-800">
+                {endGameImage.headline && (
+                  <div className="text-sm font-display font-black text-white">
+                    {endGameImage.headline}
+                  </div>
+                )}
+                {endGameImage.subheadline && (
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {endGameImage.subheadline}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Header result */}
         <div className="flex flex-col items-center text-center mb-6">
@@ -301,10 +338,14 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
           <button
             onClick={onPlayAgain}
-            className="w-full sm:w-auto px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl transition"
+            className="w-full sm:w-auto px-5 py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-slate-950 rounded-xl transition shadow-lg active:scale-95"
+            style={{
+              backgroundColor: branding?.primaryColor || '#00d2ff',
+              boxShadow: `0 0 20px ${branding?.primaryColor || '#00d2ff'}44`,
+            }}
           >
-            <RotateCcw className="w-4 h-4" />
-            Jogar Novamente
+            <RotateCcw className="w-4 h-4 text-slate-950" />
+            <span>{endGameImage?.ctaText || 'Jogar Novamente'}</span>
           </button>
 
           <div className="w-full sm:w-auto flex items-center gap-2">

@@ -79,11 +79,21 @@ export interface PlayerRegistration {
   bestReactionMs: number;
 }
 
+export interface EndGameImageConfig {
+  enabled: boolean;
+  imageUrl: string;
+  imageName?: string;
+  headline?: string; // e.g. 'Parabéns pelo Desafio!'
+  subheadline?: string; // e.g. 'Obrigado por participar! Veja a sua pontuação e tempo de reação.'
+  ctaText?: string; // e.g. 'Jogar Novamente'
+}
+
 export interface AppAdminSettings {
   passwordHash: string; // Master administrator password
   lockEntireAppWithPassword: boolean; // Require password to access and play the game
   customImageMandatory: boolean; // Enforce custom image for all users
   customTargetImage: CustomTargetImageConfig;
+  endGameImage: EndGameImageConfig;
   customLevelConfigs: Record<number, Partial<LevelConfig>>;
   tournamentMode: boolean; // Strict tournament mode: disables dev cheats
   adminDisplayName: string;

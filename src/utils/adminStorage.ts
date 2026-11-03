@@ -13,6 +13,14 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
     shapeFit: 'cover',
     customBorderColor: '#00d2ff',
   },
+  endGameImage: {
+    enabled: true,
+    imageUrl: '',
+    imageName: '',
+    headline: 'Parabéns pelo Desafio!',
+    subheadline: 'Obrigado por participar! Consulte a sua pontuação e tempo de reação abaixo.',
+    ctaText: 'Começar Novamente',
+  },
   customLevelConfigs: {},
   tournamentMode: false,
   adminDisplayName: 'Administrador Agimus',
@@ -51,7 +59,26 @@ export function loadAdminSettings(): AppAdminSettings {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) return DEFAULT_ADMIN_SETTINGS;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_ADMIN_SETTINGS, ...parsed };
+    return {
+      ...DEFAULT_ADMIN_SETTINGS,
+      ...parsed,
+      endGameImage: {
+        ...DEFAULT_ADMIN_SETTINGS.endGameImage,
+        ...(parsed.endGameImage || {}),
+      },
+      branding: {
+        ...DEFAULT_ADMIN_SETTINGS.branding,
+        ...(parsed.branding || {}),
+      },
+      logo: {
+        ...DEFAULT_ADMIN_SETTINGS.logo,
+        ...(parsed.logo || {}),
+      },
+      registration: {
+        ...DEFAULT_ADMIN_SETTINGS.registration,
+        ...(parsed.registration || {}),
+      },
+    };
   } catch {
     return DEFAULT_ADMIN_SETTINGS;
   }

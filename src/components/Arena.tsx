@@ -35,6 +35,8 @@ interface ArenaProps {
     trapsHit: number;
     records: HitRecord[];
   }) => void;
+  isAdminLoggedIn?: boolean;
+  primaryColor?: string;
 }
 
 interface FloatingText {
@@ -78,12 +80,14 @@ export const Arena: React.FC<ArenaProps> = ({
   onRestart,
   onOpenControlPanel,
   onComplete,
+  isAdminLoggedIn = false,
+  primaryColor = '#00d2ff',
 }) => {
   const arenaRef = useRef<HTMLDivElement>(null);
   const particleCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Game state
-  const [gameState, setGameState] = useState<'countdown' | 'playing' | 'paused' | 'ended'>('countdown');
+  // Game state ('ready' = kiosk idle screen with big start button)
+  const [gameState, setGameState] = useState<'ready' | 'countdown' | 'playing' | 'paused' | 'ended'>('ready');
   const [countdown, setCountdown] = useState<number>(3);
   const [activeFigures, setActiveFigures] = useState<TargetFigureData[]>([]);
   const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
@@ -198,6 +202,12 @@ export const Arena: React.FC<ArenaProps> = ({
       return () => clearTimeout(timer);
     }
   }, [countdown, gameState]);
+
+  const handleStartGame = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setCountdown(3);
+    setGameState('countdown');
+  };
 
   // Target spawner logic
   const spawnTarget = useCallback(() => {
@@ -622,11 +632,11 @@ export const Arena: React.FC<ArenaProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {onOpenControlPanel && (
+          {isAdminLoggedIn && onOpenControlPanel && (
             <button
               onClick={onOpenControlPanel}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 rounded-lg transition-colors border border-cyan-500/30 shadow-sm"
-              title="Painel de Controle Oculto (ou pressione ALT + C)"
+              title="Painel de Controle Oculto (ALT + C)"
             >
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[10px] font-mono-code font-bold tracking-wider">ALT+C</span>
@@ -721,6 +731,77 @@ export const Arena: React.FC<ArenaProps> = ({
           <div className="absolute top-3 right-4 flex items-center gap-1.5 text-[10px] text-cyan-300 font-mono-code bg-cyan-950/80 border border-cyan-700/60 px-2 py-0.5 rounded shadow z-30">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
             <span>Alvo Personalizado Ativo</span>
+          </div>
+        )}
+
+        {/* Ready / Start Screen Overlay for Kiosk Mode */}
+        {gameState === 'ready' && (
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md z-50 p-6 text-center select-none"
+          >
+            {/* Ambient glows */}
+            <div 
+              className="absolute w-72 h-72 rounded-full blur-3xl opacity-20 pointer-events-none"
+              style={{ backgroundColor: primaryColor }}
+            />
+
+            <div className="relative z-10 flex flex-col items-center max-w-lg space-y-5 animate-in fade-in zoom-in-95 duration-200">
+              {/* Level indicator pill */}
+              <div 
+                className="px-3 py-1 rounded-full text-xs font-mono-code font-bold uppercase tracking-widest border"
+                style={{
+                  borderColor: `${primaryColor}66`,
+                  color: primaryColor,
+                  backgroundColor: `${primaryColor}15`,
+                }}
+              >
+                Fase {level.id} · {level.name}
+              </div>
+
+              {/* Headline */}
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md">
+                  ARENA DE REFLEXOS
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-md">
+                  Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!
+                </p>
+              </div>
+
+              {/* Stage Parameters Pill Group */}
+              <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-mono-code">
+                <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300">
+                  🎯 {level.targetCount} Alvos
+                </span>
+                <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300">
+                  ⚡ Tolerância: {level.baseDurationMs}ms
+                </span>
+                {level.trapChance > 0 && (
+                  <span className="px-2.5 py-1 bg-red-950/60 border border-red-800/60 rounded-lg text-red-300">
+                    💣 Cuidado com Bombas
+                  </span>
+                )}
+              </div>
+
+              {/* Primary Start Game Button */}
+              <button
+                type="button"
+                onClick={handleStartGame}
+                className="mt-2 px-10 py-4.5 rounded-2xl font-display font-black text-lg sm:text-xl uppercase tracking-wider text-slate-950 flex items-center gap-3.5 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                style={{
+                  backgroundColor: primaryColor,
+                  boxShadow: `0 0 35px ${primaryColor}77`,
+                }}
+              >
+                <Play className="w-6 h-6 fill-slate-950" />
+                <span>Começar Jogo</span>
+              </button>
+
+              <div className="text-[11px] text-slate-400 font-mono-code">
+                Toque no botão para iniciar a contagem regressiva
+              </div>
+            </div>
           </div>
         )}
 

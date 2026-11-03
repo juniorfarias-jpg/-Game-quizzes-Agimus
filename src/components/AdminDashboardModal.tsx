@@ -41,7 +41,8 @@ import {
   Phone,
   Briefcase,
   FileSpreadsheet,
-  CheckCircle2
+  CheckCircle2,
+  Award
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -73,7 +74,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onDeleteRegistration,
   onClearRegistrations,
 }) => {
-  const [activeTab, setActiveTab] = useState<'branding' | 'registration' | 'levels' | 'image' | 'leaderboard' | 'security'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'registration' | 'levels' | 'image' | 'endgame' | 'leaderboard' | 'security'>('branding');
   const [settingsDraft, setSettingsDraft] = useState<AppAdminSettings>(adminSettings);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -97,6 +98,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   // Logo file input
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoUrlInput, setLogoUrlInput] = useState('');
+
+  // End Game image file input
+  const endGameFileInputRef = useRef<HTMLInputElement>(null);
+  const [endGameUrlInput, setEndGameUrlInput] = useState('');
 
   if (!isOpen) return null;
 
@@ -273,6 +278,59 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
   };
 
+  // End Game image handlers
+  const handleEndGameFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).');
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      showToast('Imagem muito grande (máximo 4MB recomendado).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSettingsDraft((prev) => ({
+          ...prev,
+          endGameImage: {
+            ...prev.endGameImage,
+            enabled: true,
+            imageUrl: reader.result as string,
+            imageName: file.name,
+          },
+        }));
+        showToast('Imagem de fim de jogo carregada!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyEndGameUrl = () => {
+    if (!endGameUrlInput.trim()) return;
+    try {
+      new URL(endGameUrlInput);
+      setSettingsDraft((prev) => ({
+        ...prev,
+        endGameImage: {
+          ...prev.endGameImage,
+          enabled: true,
+          imageUrl: endGameUrlInput.trim(),
+          imageName: 'Imagem via URL',
+        },
+      }));
+      setEndGameUrlInput('');
+      showToast('URL da imagem de fim de jogo aplicada!');
+    } catch {
+      showToast('URL da imagem de fim de jogo inválida.');
+    }
+  };
+
   // Export registrations as CSV
   const handleExportCSV = () => {
     if (registrations.length === 0) return;
@@ -416,6 +474,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           >
             <ImageIcon className="w-4 h-4" />
             <span>Imagem do Alvo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('endgame')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'endgame'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Imagem Fim de Jogo</span>
           </button>
 
           <button
@@ -1390,6 +1460,258 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   >
                     Aplicar
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: Imagem de Fim de Jogo */}
+          {activeTab === 'endgame' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-bold text-white font-display uppercase tracking-wider flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>Imagem e Banner de Fim de Jogo (Tela de Encerramento)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Esta imagem é exibida com destaque quando a partida termina, acompanhada da pontuação, tempo de reação alcançado e botão para começar de novo.
+                </p>
+              </div>
+
+              {/* Toggle Enable */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Exibir Imagem Personalizada no Fim de Jogo</span>
+                    {settingsDraft.endGameImage.enabled && (
+                      <span className="px-1.5 py-0.2 bg-emerald-400 text-slate-950 text-[9px] font-bold rounded">
+                        ATIVADA
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Quando ativado, a imagem configurada será apresentada na tela de encerramento para todos os jogadores.
+                  </div>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={settingsDraft.endGameImage.enabled}
+                  onChange={(e) =>
+                    setSettingsDraft((prev) => ({
+                      ...prev,
+                      endGameImage: {
+                        ...prev.endGameImage,
+                        enabled: e.target.checked,
+                      },
+                    }))
+                  }
+                  className="w-5 h-5 accent-emerald-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Live Preview Card */}
+              <div className="p-5 bg-slate-950/90 border border-slate-800 rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-mono-code uppercase font-bold text-slate-400 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Pré-Visualização ao Vivo da Tela de Fim de Jogo</span>
+                  </div>
+                  {settingsDraft.endGameImage.imageUrl && (
+                    <button
+                      onClick={() => {
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          endGameImage: {
+                            ...prev.endGameImage,
+                            imageUrl: '',
+                            imageName: '',
+                          },
+                        }));
+                        showToast('Imagem de fim de jogo removida.');
+                      }}
+                      className="text-xs text-rose-400 hover:text-rose-200 flex items-center gap-1 hover:underline"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remover Imagem</span>
+                    </button>
+                  )}
+                </div>
+
+                <div 
+                  className="p-5 rounded-xl border border-slate-700/80 bg-gradient-to-b from-slate-900/90 to-slate-950/90 shadow-xl max-w-lg mx-auto flex flex-col items-center text-center space-y-3"
+                  style={{
+                    boxShadow: `0 0 30px ${settingsDraft.branding.primaryColor}25`,
+                  }}
+                >
+                  {/* Image display */}
+                  {settingsDraft.endGameImage.imageUrl ? (
+                    <div className="w-full relative rounded-xl overflow-hidden border border-slate-700 max-h-56 bg-slate-950 flex items-center justify-center shadow-lg">
+                      <img
+                        src={settingsDraft.endGameImage.imageUrl}
+                        alt="Fim de jogo"
+                        className="w-full h-auto max-h-56 object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-40 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center p-4 bg-slate-900/40 text-slate-500">
+                      <ImageIcon className="w-8 h-8 mb-1 text-slate-600" />
+                      <span className="text-xs font-semibold">Nenhuma imagem carregada</span>
+                      <span className="text-[10px] text-slate-600">Carregue um banner ou foto abaixo</span>
+                    </div>
+                  )}
+
+                  {/* Headline */}
+                  <div className="text-base font-display font-black text-white">
+                    {settingsDraft.endGameImage.headline || 'Parabéns pelo Desafio!'}
+                  </div>
+
+                  {/* Subheadline */}
+                  <div className="text-xs text-slate-400 max-w-xs">
+                    {settingsDraft.endGameImage.subheadline || 'Obrigado por participar! Veja a sua pontuação e tempo de reação abaixo.'}
+                  </div>
+
+                  {/* Dummy Stats Preview */}
+                  <div className="grid grid-cols-2 gap-2 w-full pt-1">
+                    <div className="p-2 bg-slate-950/70 border border-slate-800 rounded-lg text-center">
+                      <div className="text-[9px] uppercase font-mono-code text-slate-400">Tempo Médio</div>
+                      <div className="text-sm font-bold text-cyan-400 font-mono-code">218ms</div>
+                    </div>
+                    <div className="p-2 bg-slate-950/70 border border-slate-800 rounded-lg text-center">
+                      <div className="text-[9px] uppercase font-mono-code text-slate-400">Pontuação</div>
+                      <div className="text-sm font-bold text-amber-400 font-display">24.500</div>
+                    </div>
+                  </div>
+
+                  {/* Dummy CTA button */}
+                  <button 
+                    type="button"
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold font-display uppercase tracking-wider text-slate-950 shadow-md transition"
+                    style={{ backgroundColor: settingsDraft.branding.primaryColor }}
+                  >
+                    {settingsDraft.endGameImage.ctaText || 'Começar Novamente'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Upload image controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* File Upload */}
+                <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Upload de Arquivo (PNG, JPG, WebP)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Selecione um arquivo de imagem do seu computador ou dispositivo.
+                  </p>
+                  <input
+                    ref={endGameFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEndGameFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => endGameFileInputRef.current?.click()}
+                    className="w-full py-2 px-4 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 rounded-xl transition border border-cyan-400/40"
+                  >
+                    Selecionar Imagem do Computador
+                  </button>
+                </div>
+
+                {/* Direct URL */}
+                <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <LinkIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Definir Imagem por Link (URL)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Insira a URL direta da imagem hospedada na web.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={endGameUrlInput}
+                      onChange={(e) => setEndGameUrlInput(e.target.value)}
+                      placeholder="https://exemplo.com/fim-de-jogo.png"
+                      className="flex-1 px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyEndGameUrl}
+                      className="px-4 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Customization Fields */}
+              <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-3">
+                <div className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                  Textos da Tela de Encerramento
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Título Principal (Headline):</label>
+                    <input
+                      type="text"
+                      value={settingsDraft.endGameImage.headline ?? ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          endGameImage: {
+                            ...prev.endGameImage,
+                            headline: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Ex: Parabéns pelo Desafio!"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Texto do Botão de Reiniciar (CTA):</label>
+                    <input
+                      type="text"
+                      value={settingsDraft.endGameImage.ctaText ?? ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          endGameImage: {
+                            ...prev.endGameImage,
+                            ctaText: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Ex: Jogar Novamente / Começar"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Subtítulo / Mensagem para o Jogador:</label>
+                  <textarea
+                    rows={2}
+                    value={settingsDraft.endGameImage.subheadline ?? ''}
+                    onChange={(e) =>
+                      setSettingsDraft((prev) => ({
+                        ...prev,
+                        endGameImage: {
+                          ...prev.endGameImage,
+                          subheadline: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="Ex: Obrigado por participar! Consulte a sua pontuação e tempo de reação."
+                    className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                  />
                 </div>
               </div>
             </div>

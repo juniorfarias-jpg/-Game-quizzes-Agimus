@@ -196,6 +196,7 @@ export default function App() {
   const handleAdminLogout = () => {
     setIsAdminLoggedIn(false);
     setShowAdminDashboardModal(false);
+    setActiveTab('arena');
   };
 
   const handleSaveAdminSettings = async (newSettings: AppAdminSettings) => {
@@ -543,94 +544,100 @@ export default function App() {
               onRestart={handleRestartArena}
               onOpenControlPanel={handleOpenAdmin}
               onComplete={handleStageComplete}
+              isAdminLoggedIn={isAdminLoggedIn}
+              primaryColor={primaryColor}
             />
 
-            {/* Quick Level Switcher Below Arena */}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Fase Atual:
-                </span>
-                <span className="text-xs font-bold text-white font-display">
-                  {currentLevel.name}
-                </span>
-                {adminSettings.customLevelConfigs[currentLevel.id] && (
-                  <span 
-                    className="px-1.5 py-0.2 rounded border text-[10px] font-mono-code font-bold uppercase"
-                    style={{
-                      borderColor: primaryColor,
-                      color: primaryColor,
-                      backgroundColor: `${primaryColor}20`,
-                    }}
-                  >
-                    MODIFICADA PELO ADMIN
+            {/* Admin-Only Controls & Level Switcher (Hidden for normal kiosk users) */}
+            {isAdminLoggedIn && (
+              <div className="space-y-3 mt-6 animate-in fade-in duration-200">
+                {/* Quick Level Switcher Below Arena */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Fase Atual:
+                    </span>
+                    <span className="text-xs font-bold text-white font-display">
+                      {currentLevel.name}
+                    </span>
+                    {adminSettings.customLevelConfigs[currentLevel.id] && (
+                      <span 
+                        className="px-1.5 py-0.2 rounded border text-[10px] font-mono-code font-bold uppercase"
+                        style={{
+                          borderColor: primaryColor,
+                          color: primaryColor,
+                          backgroundColor: `${primaryColor}20`,
+                        }}
+                      >
+                        MODIFICADA PELO ADMIN
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {effectiveLevels.map((lvl) => {
+                      const isUnlocked =
+                        lvl.id === 1 ||
+                        (lvl.unlockRequirements &&
+                          playerStats.levelProgress[lvl.unlockRequirements.prevLevelId]?.stars >=
+                            lvl.unlockRequirements.minStars);
+
+                      const isCurrent = lvl.id === currentLevelId;
+
+                      return (
+                        <button
+                          key={lvl.id}
+                          onClick={() => isUnlocked && handleSelectLevel(lvl.id)}
+                          disabled={!isUnlocked}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold font-display transition ${
+                            isCurrent
+                              ? 'text-slate-950 shadow-md font-black'
+                              : isUnlocked
+                              ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                              : 'bg-slate-950 text-slate-700 cursor-not-allowed border border-slate-900'
+                          }`}
+                          style={isCurrent ? { backgroundColor: primaryColor } : undefined}
+                        >
+                          {lvl.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Admin Status & Shortcut Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 font-mono-code px-2">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-bold">Modo Administrador Ativo</span>
+                    <span>· Atalho:</span>
+                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">ALT</kbd>
+                    <span>+</span>
+                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">C</kbd>
                   </span>
-                )}
-              </div>
 
-              <div className="flex items-center gap-1.5">
-                {effectiveLevels.map((lvl) => {
-                  const isUnlocked =
-                    lvl.id === 1 ||
-                    (lvl.unlockRequirements &&
-                      playerStats.levelProgress[lvl.unlockRequirements.prevLevelId]?.stars >=
-                        lvl.unlockRequirements.minStars);
-
-                  const isCurrent = lvl.id === currentLevelId;
-
-                  return (
+                  <div className="flex items-center gap-3">
                     <button
-                      key={lvl.id}
-                      onClick={() => isUnlocked && handleSelectLevel(lvl.id)}
-                      disabled={!isUnlocked}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold font-display transition ${
-                        isCurrent
-                          ? 'text-slate-950 shadow-md font-black'
-                          : isUnlocked
-                          ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                          : 'bg-slate-950 text-slate-700 cursor-not-allowed border border-slate-900'
-                      }`}
-                      style={isCurrent ? { backgroundColor: primaryColor } : undefined}
+                      onClick={() => setShowRegistrationModal(true)}
+                      className="hover:underline flex items-center gap-1"
+                      style={{ color: primaryColor }}
                     >
-                      {lvl.id}
+                      <UserPlus className="w-3 h-3" />
+                      <span>Ficha de Inscrição</span>
                     </button>
-                  );
-                })}
+
+                    <button
+                      onClick={handleOpenAdmin}
+                      className="hover:underline flex items-center gap-1"
+                      style={{ color: primaryColor }}
+                    >
+                      <Sliders className="w-3 h-3" />
+                      <span>Configurar Painel Admin</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Admin & Secret Shortcut Callout */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 font-mono-code px-2">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5" style={{ color: primaryColor }} />
-                <span>Painel Administrador:</span>
-                <span>Pressione</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">ALT</kbd>
-                <span>+</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">C</kbd>
-                <span>para abrir com senha.</span>
-              </span>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowRegistrationModal(true)}
-                  className="hover:underline flex items-center gap-1"
-                  style={{ color: primaryColor }}
-                >
-                  <UserPlus className="w-3 h-3" />
-                  <span>Ficha de Inscrição</span>
-                </button>
-
-                <button
-                  onClick={handleOpenAdmin}
-                  className="hover:underline flex items-center gap-1"
-                  style={{ color: primaryColor }}
-                >
-                  <Sliders className="w-3 h-3" />
-                  <span>{isAdminLoggedIn ? 'Configurar Modo Admin' : 'Entrar com Senha'}</span>
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -681,6 +688,8 @@ export default function App() {
           onSubmitScore={handleSubmitScore}
           defaultPlayerName={playerStats.playerName}
           defaultCountry={playerStats.country}
+          endGameImage={adminSettings.endGameImage}
+          branding={adminSettings.branding}
         />
       )}
 

@@ -39,6 +39,10 @@ export function subscribeToCloudSettings(
           const merged: AppAdminSettings = {
             ...DEFAULT_ADMIN_SETTINGS,
             ...cloudData,
+            endGameImage: {
+              ...DEFAULT_ADMIN_SETTINGS.endGameImage,
+              ...(cloudData.endGameImage || {}),
+            },
             branding: {
               ...DEFAULT_ADMIN_SETTINGS.branding,
               ...(cloudData.branding || {}),
