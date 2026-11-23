@@ -537,6 +537,8 @@ export default function App() {
   const primaryColor = adminSettings.branding.primaryColor || '#00d2ff';
   const secondaryColor = adminSettings.branding.secondaryColor || '#6366f1';
   const bgColor = adminSettings.branding.backgroundColor || '#090d16';
+  const backgroundPattern = adminSettings.branding.backgroundPattern || 'solid';
+  const backgroundImageUrl = adminSettings.branding.backgroundImageUrl || '';
   const uiCustom = adminSettings.uiCustomization;
   const watermarkImage =
     uiCustom?.watermarkEnabled
@@ -554,6 +556,53 @@ export default function App() {
         ['--theme-secondary' as string]: secondaryColor,
       }}
     >
+      {/* Dynamic App Background Pattern / Image Layer */}
+      {backgroundPattern === 'grid' && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `linear-gradient(${primaryColor}1a 1px, transparent 1px), linear-gradient(90deg, ${primaryColor}1a 1px, transparent 1px)`,
+            backgroundSize: '42px 42px',
+          }}
+        />
+      )}
+      {backgroundPattern === 'dots' && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `radial-gradient(${primaryColor}33 1.4px, transparent 1.4px)`,
+            backgroundSize: '26px 26px',
+          }}
+        />
+      )}
+      {backgroundPattern === 'aurora' && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `radial-gradient(circle at 18% 20%, ${primaryColor}2e 0%, transparent 46%), radial-gradient(circle at 82% 78%, ${secondaryColor}2e 0%, transparent 50%)`,
+          }}
+        />
+      )}
+      {backgroundPattern === 'image' && backgroundImageUrl && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          <img
+            src={backgroundImageUrl}
+            alt=""
+            className="w-full h-full object-cover opacity-40"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `${bgColor}99` }}
+          />
+        </div>
+      )}
+
       {/* Full-Page Giant Centered Background Watermark */}
       {watermarkImage && (
         <div

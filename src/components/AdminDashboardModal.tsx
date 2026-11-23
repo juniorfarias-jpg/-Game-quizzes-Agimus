@@ -46,7 +46,12 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   Award,
-  LayoutTemplate
+  LayoutTemplate,
+  PanelTop,
+  Grid3X3,
+  CircleDot,
+  Square,
+  Zap
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -111,6 +116,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const endGameFileInputRef = useRef<HTMLInputElement>(null);
   const [endGameUrlInput, setEndGameUrlInput] = useState('');
 
+  // App Background image file input
+  const bgImageInputRef = useRef<HTMLInputElement>(null);
+  const [bgImageUrlInput, setBgImageUrlInput] = useState('');
+
   if (!isOpen) return null;
 
   const showToast = (msg: string) => {
@@ -137,6 +146,49 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAppBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Selecione uma imagem válida (PNG, JPG, WebP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSettingsDraft((prev) => ({
+          ...prev,
+          branding: {
+            ...prev.branding,
+            backgroundPattern: 'image',
+            backgroundImageUrl: reader.result as string,
+          },
+        }));
+        showToast('Imagem de fundo do aplicativo carregada!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyAppBgUrl = () => {
+    if (!bgImageUrlInput.trim()) return;
+    try {
+      new URL(bgImageUrlInput);
+      setSettingsDraft((prev) => ({
+        ...prev,
+        branding: {
+          ...prev.branding,
+          backgroundPattern: 'image',
+          backgroundImageUrl: bgImageUrlInput.trim(),
+        },
+      }));
+      setBgImageUrlInput('');
+      showToast('URL da imagem de fundo aplicada!');
+    } catch {
+      showToast('URL inválida.');
+    }
   };
 
   const handleApplyFestivalPreset = () => {
@@ -689,7 +741,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   Cores Personalizadas (Hexadecimal)
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Primary Color */}
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
@@ -709,7 +761,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             },
                           }))
                         }
-                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
                       />
                       <input
                         type="text"
@@ -748,7 +800,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             },
                           }))
                         }
-                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
                       />
                       <input
                         type="text"
@@ -787,7 +839,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             },
                           }))
                         }
-                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
                       />
                       <input
                         type="text"
@@ -806,7 +858,314 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       />
                     </div>
                   </div>
+
+                  {/* Header Background Color */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                      Cor de Fundo do Cabeçalho:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settingsDraft.branding.headerBgColor || '#060a14'}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              headerBgColor: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={settingsDraft.branding.headerBgColor || '#060a14'}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              headerBgColor: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono-code"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* PERSONALIZAÇÃO DO CABEÇALHO (BARRA SUPERIOR / TOPO) */}
+              <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <PanelTop className="w-4 h-4 text-cyan-400" />
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                    Personalização do Cabeçalho (Barra Superior / Topo)
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      id: 'glass' as const,
+                      title: 'Translúcido com Desfoque',
+                      desc: 'Glassmorphism com efeito blur e transparência moderna.',
+                    },
+                    {
+                      id: 'solid' as const,
+                      title: 'Cor Sólida Opaca',
+                      desc: 'Fundo 100% preenchido pela cor selecionada.',
+                    },
+                    {
+                      id: 'neon_gradient' as const,
+                      title: 'Gradiente Fluido Neon',
+                      desc: 'Mistura fluida com a cor primária de destaque.',
+                    },
+                  ].map((option) => {
+                    const currentStyle = settingsDraft.branding.headerStyle || 'glass';
+                    const isSelected = currentStyle === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              headerStyle: option.id,
+                            },
+                          }))
+                        }
+                        className={`text-left p-3.5 rounded-xl border transition flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-slate-900/95 shadow-lg'
+                            : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/40'
+                        }`}
+                        style={{
+                          borderColor: isSelected ? settingsDraft.branding.primaryColor : undefined,
+                          boxShadow: isSelected
+                            ? `0 0 18px ${settingsDraft.branding.primaryColor}22`
+                            : undefined,
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-xs font-bold text-white">{option.title}</span>
+                          {isSelected && (
+                            <Check
+                              className="w-4 h-4 shrink-0"
+                              style={{ color: settingsDraft.branding.primaryColor }}
+                            />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">{option.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Live Header Preview */}
+                <div className="space-y-2 pt-1">
+                  <div className="text-[11px] font-semibold text-slate-300">
+                    Pré-visualização do Cabeçalho:
+                  </div>
+                  {(() => {
+                    const pColor = settingsDraft.branding.primaryColor || '#00d2ff';
+                    const hBg = settingsDraft.branding.headerBgColor || '#060a14';
+                    const hStyle = settingsDraft.branding.headerStyle || 'glass';
+                    const previewStyle: React.CSSProperties =
+                      hStyle === 'solid'
+                        ? {
+                            backgroundColor: hBg,
+                            borderColor: `${pColor}44`,
+                          }
+                        : hStyle === 'neon_gradient'
+                        ? {
+                            backgroundColor: hBg,
+                            backgroundImage: `linear-gradient(90deg, ${hBg} 0%, ${pColor}33 50%, ${hBg} 100%)`,
+                            borderColor: `${pColor}66`,
+                          }
+                        : {
+                            backgroundColor: `${hBg}d9`,
+                            backdropFilter: 'blur(12px)',
+                            borderColor: 'rgba(51, 65, 85, 0.7)',
+                          };
+
+                    return (
+                      <div
+                        className="w-full px-4 py-3 rounded-xl border flex items-center justify-between gap-3 transition-all"
+                        style={previewStyle}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {settingsDraft.logo.enabled && settingsDraft.logo.logoUrl ? (
+                            <img
+                              src={settingsDraft.logo.logoUrl}
+                              alt="Logo Preview"
+                              className="h-8 max-w-[120px] object-contain rounded"
+                            />
+                          ) : (
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                              style={{ backgroundColor: pColor }}
+                            >
+                              <Zap className="w-4 h-4 text-slate-950" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-xs font-display font-black text-white tracking-wider truncate">
+                              {settingsDraft.logo.companyName || 'AGIMUS'}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-mono-code truncate uppercase">
+                              {settingsDraft.logo.subTitle || 'QUIOSQUE DE REAÇÃO RÁPIDA'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className="px-3 py-1 rounded-md text-[11px] font-bold text-slate-950"
+                            style={{ backgroundColor: pColor }}
+                          >
+                            Jogar
+                          </span>
+                          <span className="px-3 py-1 rounded-md text-[11px] font-semibold text-slate-300 bg-slate-900/80 border border-slate-700">
+                            Ranking
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* FUNDO DO APLICATIVO (PADRÃO VISUAL & IMAGEM DE FUNDO) */}
+              <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <Grid3X3 className="w-4 h-4 text-cyan-400" />
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                    Fundo do Aplicativo (Padrão Visual &amp; Imagem de Fundo)
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {[
+                    { id: 'grid' as const, label: 'Grelha Sci-Fi', icon: Grid3X3 },
+                    { id: 'dots' as const, label: 'Pontos Tech', icon: CircleDot },
+                    { id: 'aurora' as const, label: 'Brilho Aurora', icon: Sparkles },
+                    { id: 'solid' as const, label: 'Sólido Limpo', icon: Square },
+                    { id: 'image' as const, label: 'Foto / Imagem', icon: Upload },
+                  ].map((pat) => {
+                    const Icon = pat.icon;
+                    const currentPattern = settingsDraft.branding.backgroundPattern || 'solid';
+                    const isSelected = currentPattern === pat.id;
+                    return (
+                      <button
+                        key={pat.id}
+                        type="button"
+                        onClick={() =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            branding: {
+                              ...prev.branding,
+                              backgroundPattern: pat.id,
+                            },
+                          }))
+                        }
+                        className={`p-3.5 rounded-xl border transition flex flex-col items-center justify-center gap-2 text-center ${
+                          isSelected
+                            ? 'bg-slate-900 text-white shadow-lg'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                        }`}
+                        style={{
+                          borderColor: isSelected ? settingsDraft.branding.primaryColor : undefined,
+                          color: isSelected ? settingsDraft.branding.primaryColor : undefined,
+                        }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="text-xs font-bold">{pat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(settingsDraft.branding.backgroundPattern || 'solid') === 'image' && (
+                  <div className="p-4 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-white">
+                          Imagem de Fundo Personalizada
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          A imagem será exibida em tela inteira atrás da arena e menus.
+                        </div>
+                      </div>
+                      {settingsDraft.branding.backgroundImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              branding: { ...prev.branding, backgroundImageUrl: '' },
+                            }))
+                          }
+                          className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remover Imagem</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {settingsDraft.branding.backgroundImageUrl && (
+                      <div className="w-full h-28 rounded-lg overflow-hidden border border-slate-700 bg-slate-950">
+                        <img
+                          src={settingsDraft.branding.backgroundImageUrl}
+                          alt="Prévia do Fundo"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <input
+                          ref={bgImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAppBgImageUpload}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => bgImageInputRef.current?.click()}
+                          className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-white flex items-center justify-center gap-2 transition"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Carregar Imagem de Fundo</span>
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={bgImageUrlInput}
+                          onChange={(e) => setBgImageUrlInput(e.target.value)}
+                          placeholder="Ou cole a URL da imagem..."
+                          className="flex-1 px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyAppBgUrl}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-cyan-400"
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* COMPANY LOGO SECTION */}

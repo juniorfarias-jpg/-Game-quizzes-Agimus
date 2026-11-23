@@ -59,6 +59,10 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
     primaryColor: '#00d2ff',
     secondaryColor: '#0284c7',
     backgroundColor: '#070c18',
+    headerBgColor: '#060a14',
+    headerStyle: 'glass',
+    backgroundPattern: 'solid',
+    backgroundImageUrl: '',
     themePreset: 'agimus_blue',
   },
   logo: {

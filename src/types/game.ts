@@ -50,10 +50,17 @@ export interface DevControlOverrides {
   unlimitedTime: boolean;
 }
 
+export type HeaderVisualStyle = 'glass' | 'solid' | 'neon_gradient';
+export type AppBackgroundPattern = 'grid' | 'dots' | 'aurora' | 'solid' | 'image';
+
 export interface BrandingColorsConfig {
   primaryColor: string; // e.g. '#00d2ff' or '#0284c7'
   secondaryColor: string; // e.g. '#6366f1'
   backgroundColor: string; // e.g. '#090d16'
+  headerBgColor?: string; // e.g. '#060a14'
+  headerStyle?: HeaderVisualStyle;
+  backgroundPattern?: AppBackgroundPattern;
+  backgroundImageUrl?: string;
   themePreset: 'agimus_blue' | 'cyberpunk' | 'emerald_tech' | 'sunset' | 'crimson' | 'custom';
 }
 

@@ -37,10 +37,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const totalStars = Object.values(stats.levelProgress).reduce((acc, p) => acc + p.stars, 0);
   const primaryColor = branding?.primaryColor || '#00d2ff';
+  const headerBg = branding?.headerBgColor || '#060a14';
+  const headerStyle = branding?.headerStyle || 'glass';
   const isMinimal = Boolean(uiCustomization?.minimalNavbar);
 
+  const headerInlineStyle: React.CSSProperties =
+    headerStyle === 'solid'
+      ? {
+          backgroundColor: headerBg,
+          borderBottomColor: `${primaryColor}33`,
+        }
+      : headerStyle === 'neon_gradient'
+      ? {
+          backgroundColor: headerBg,
+          backgroundImage: `linear-gradient(90deg, ${headerBg} 0%, ${primaryColor}2b 50%, ${headerBg} 100%)`,
+          borderBottomColor: `${primaryColor}55`,
+        }
+      : {
+          backgroundColor: `${headerBg}d9`,
+          backdropFilter: 'blur(12px)',
+          borderBottomColor: 'rgba(30, 41, 59, 0.8)',
+        };
+
   return (
-    <header className="w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
+    <header
+      className="w-full border-b sticky top-0 z-40 transition-colors duration-300"
+      style={headerInlineStyle}
+    >
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
         {/* Brand / Logo */}
         <div 
