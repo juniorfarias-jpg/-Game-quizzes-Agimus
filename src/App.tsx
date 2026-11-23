@@ -57,7 +57,7 @@ import { HiddenControlPanel } from './components/HiddenControlPanel';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationModal } from './components/RegistrationModal';
-import { Sliders, ShieldCheck, Lock, UserPlus } from 'lucide-react';
+import { Sliders, ShieldCheck, UserPlus, Minimize2 } from 'lucide-react';
 
 const CUSTOM_IMAGE_STORAGE_KEY = 'neuroreflex_custom_image_v1';
 
@@ -99,6 +99,7 @@ export default function App() {
   const [hasRegisteredThisSession, setHasRegisteredThisSession] = useState<boolean>(false);
   const [pendingPlayAfterRegistration, setPendingPlayAfterRegistration] = useState<boolean>(false);
   const [autoStartSignal, setAutoStartSignal] = useState<number>(0);
+  const [isFrameless, setIsFrameless] = useState<boolean>(false);
 
   // Hidden Control Panel & Custom Image states
   const [isControlPanelOpen, setIsControlPanelOpen] = useState<boolean>(false);
@@ -171,6 +172,29 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAdminLoggedIn]);
+
+  // 5. Sync document title with Admin Customization
+  useEffect(() => {
+    const title = adminSettings.uiCustomization?.appTitle?.trim();
+    if (title) {
+      document.title = title;
+    }
+  }, [adminSettings.uiCustomization?.appTitle]);
+
+  // Toggle Frameless / Fullscreen Kiosk Mode ("Sem Barra")
+  const handleToggleFrameless = useCallback(() => {
+    setIsFrameless((prev) => {
+      const next = !prev;
+      try {
+        if (next && !document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        } else if (!next && document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      } catch {}
+      return next;
+    });
+  }, []);
 
   // Handle Admin Open
   const handleOpenAdmin = () => {
@@ -513,33 +537,72 @@ export default function App() {
   const primaryColor = adminSettings.branding.primaryColor || '#00d2ff';
   const secondaryColor = adminSettings.branding.secondaryColor || '#6366f1';
   const bgColor = adminSettings.branding.backgroundColor || '#090d16';
+  const uiCustom = adminSettings.uiCustomization;
+  const watermarkImage =
+    uiCustom?.watermarkEnabled
+      ? uiCustom.watermarkUseCompanyLogo
+        ? adminSettings.logo.logoUrl
+        : uiCustom.watermarkUrl
+      : '';
 
   return (
     <div 
-      className="min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-cyan-500 selection:text-black"
+      className="relative min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-cyan-500 selection:text-black overflow-x-hidden"
       style={{
         backgroundColor: bgColor,
         ['--theme-primary' as string]: primaryColor,
         ['--theme-secondary' as string]: secondaryColor,
       }}
     >
-      {/* Navbar with dynamic logo and colors */}
-      <Navbar
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        stats={playerStats}
-        soundEnabled={soundEnabled}
-        isAdminLoggedIn={isAdminLoggedIn}
-        onOpenAdmin={handleOpenAdmin}
-        onToggleSound={handleToggleSound}
-        onOpenCertificate={() => setShowCertificateModal(true)}
-        logo={adminSettings.logo}
-        branding={adminSettings.branding}
-        onOpenRegistration={() => setShowRegistrationModal(true)}
-      />
+      {/* Full-Page Giant Centered Background Watermark */}
+      {watermarkImage && (
+        <div
+          className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          <img
+            src={watermarkImage}
+            alt=""
+            className="w-[75vmin] h-[75vmin] max-w-[780px] max-h-[780px] object-contain select-none"
+            style={{ opacity: uiCustom?.watermarkOpacity ?? 0.08 }}
+          />
+        </div>
+      )}
+
+      {/* Navbar with dynamic logo, colors & minimal/frameless support */}
+      {!isFrameless && uiCustom?.showNavbar !== false && (
+        <Navbar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          stats={playerStats}
+          soundEnabled={soundEnabled}
+          isAdminLoggedIn={isAdminLoggedIn}
+          onOpenAdmin={handleOpenAdmin}
+          onToggleSound={handleToggleSound}
+          onOpenCertificate={() => setShowCertificateModal(true)}
+          logo={adminSettings.logo}
+          branding={adminSettings.branding}
+          uiCustomization={uiCustom}
+          isFrameless={isFrameless}
+          onToggleFrameless={handleToggleFrameless}
+          onOpenRegistration={() => setShowRegistrationModal(true)}
+        />
+      )}
+
+      {/* Discreet floating exit control when in Frameless ("Sem Barra") mode */}
+      {isFrameless && (
+        <button
+          onClick={handleToggleFrameless}
+          className="fixed top-3 right-3 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/75 hover:bg-slate-800 border border-slate-700/70 text-slate-300 hover:text-white opacity-40 hover:opacity-100 transition flex items-center gap-1.5 backdrop-blur-sm"
+          title="Mostrar Barra Superior"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+          <span>Mostrar Barra</span>
+        </button>
+      )}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'arena' && (
           <div>
             <Arena
@@ -549,6 +612,8 @@ export default function App() {
               crosshair={playerStats.equippedCrosshair}
               customImage={effectiveCustomImage}
               sceneConfig={adminSettings.sceneConfig}
+              uiCustomization={uiCustom}
+              onInstallOrFrameless={handleToggleFrameless}
               devOverrides={devOverrides}
               soundEnabled={soundEnabled}
               onToggleSound={handleToggleSound}

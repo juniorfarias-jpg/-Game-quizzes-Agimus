@@ -9,7 +9,8 @@ import {
   CustomTargetImageConfig,
   DevControlOverrides,
   ArenaSceneConfig,
-  PestKind
+  PestKind,
+  AppCustomizationConfig
 } from '../types/game';
 import { sound } from '../utils/sound';
 import { TargetFigure } from './TargetFigure';
@@ -17,7 +18,7 @@ import { CustomCrosshair } from './CustomCrosshair';
 import { PestSprite, PEST_META } from './PestSprite';
 import { WalkingCats } from './WalkingCats';
 import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
-import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2 } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2, Maximize2 } from 'lucide-react';
 
 interface ArenaProps {
   level: LevelConfig;
@@ -25,6 +26,8 @@ interface ArenaProps {
   crosshair: CrosshairType;
   customImage?: CustomTargetImageConfig;
   sceneConfig?: ArenaSceneConfig;
+  uiCustomization?: AppCustomizationConfig;
+  onInstallOrFrameless?: () => void;
   devOverrides?: DevControlOverrides;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -93,6 +96,8 @@ export const Arena: React.FC<ArenaProps> = ({
   crosshair,
   customImage,
   sceneConfig,
+  uiCustomization,
+  onInstallOrFrameless,
   devOverrides,
   soundEnabled,
   onToggleSound,
@@ -698,67 +703,77 @@ export const Arena: React.FC<ArenaProps> = ({
         }`}
       >
         {/* Stage & Progress info */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center font-display font-bold text-indigo-400">
-            {level.id}
-          </div>
-          <div>
-            <div className="text-xs font-semibold tracking-wider text-indigo-400 uppercase font-display">
-              {level.name}
+        {uiCustomization?.showHudStageInfo !== false ? (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center font-display font-bold text-indigo-400">
+              {level.id}
             </div>
-            <div className="text-xs text-slate-400">
-              Alvos: <span className="text-white font-mono-code font-bold">{spawnedCount}/{level.targetCount}</span>
+            <div>
+              <div className="text-xs font-semibold tracking-wider text-indigo-400 uppercase font-display">
+                {level.name}
+              </div>
+              <div className="text-xs text-slate-400">
+                Alvos: <span className="text-white font-mono-code font-bold">{spawnedCount}/{level.targetCount}</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div />
+        )}
 
         {/* Real-time Reflex Metrics */}
-        <div className="flex items-center gap-6">
-          {/* Reaction Speed Indicator */}
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-cyan-400" />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Último / Média</div>
-              <div className="font-mono-code text-sm font-bold text-white flex items-center gap-1.5">
-                <span className={lastReactionMs && lastReactionMs < 250 ? 'text-cyan-400' : 'text-slate-200'}>
-                  {lastReactionMs ? `${lastReactionMs}ms` : '--'}
-                </span>
-                <span className="text-slate-500">/</span>
-                <span className="text-emerald-400">{currentAvgMs > 0 ? `${currentAvgMs}ms` : '--'}</span>
+        {uiCustomization?.showHudMetrics !== false && (
+          <div className="flex items-center gap-6">
+            {/* Reaction Speed Indicator */}
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              <div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Reação</div>
+                <div className="font-mono-code text-sm font-bold text-white flex items-center gap-1.5">
+                  <span className={lastReactionMs && lastReactionMs < 250 ? 'text-cyan-400' : 'text-slate-200'}>
+                    {lastReactionMs ? `${lastReactionMs}ms` : '--'}
+                  </span>
+                  {currentAvgMs > 0 && (
+                    <>
+                      <span className="text-slate-500">/</span>
+                      <span className="text-emerald-400">{currentAvgMs}ms</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Combo Multiplier */}
+            <div className="flex items-center gap-2">
+              <Flame className={`w-4 h-4 ${combo > 3 ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
+              <div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Combo</div>
+                <div className="font-mono-code text-sm font-bold text-amber-400">
+                  {combo}x
+                </div>
+              </div>
+            </div>
+
+            {/* Accuracy */}
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-400" />
+              <div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Precisão</div>
+                <div className="font-mono-code text-sm font-bold text-emerald-400">
+                  {currentAccuracy}%
+                </div>
+              </div>
+            </div>
+
+            {/* Score */}
+            <div className="px-3 py-1 bg-slate-950/70 border border-slate-700/60 rounded-lg">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pontos</div>
+              <div className="font-display text-base font-bold text-white tracking-wide">
+                {score.toLocaleString()}
               </div>
             </div>
           </div>
-
-          {/* Combo Multiplier */}
-          <div className="flex items-center gap-2">
-            <Flame className={`w-4 h-4 ${combo > 3 ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Combo</div>
-              <div className="font-mono-code text-sm font-bold text-amber-400">
-                {combo}x <span className="text-[10px] text-amber-500 font-normal">({(1 + Math.min(combo * 0.1, 2.0)).toFixed(1)}x)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Accuracy */}
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-emerald-400" />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Precisão</div>
-              <div className="font-mono-code text-sm font-bold text-emerald-400">
-                {currentAccuracy}%
-              </div>
-            </div>
-          </div>
-
-          {/* Score */}
-          <div className="px-3 py-1 bg-slate-950/70 border border-slate-700/60 rounded-lg">
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pontos</div>
-            <div className="font-display text-base font-bold text-white tracking-wide">
-              {score.toLocaleString()}
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
@@ -769,17 +784,19 @@ export const Arena: React.FC<ArenaProps> = ({
               title="Painel de Controle Oculto (ALT + C)"
             >
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[10px] font-mono-code font-bold tracking-wider">ALT+C</span>
+              <span className="text-[10px] font-mono-code font-bold tracking-wider">PAINEL</span>
             </button>
           )}
 
-          <button
-            onClick={onToggleSound}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
-            title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-          </button>
+          {uiCustomization?.showHudSoundButton !== false && (
+            <button
+              onClick={onToggleSound}
+              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+            </button>
+          )}
           {isAdminLoggedIn && isFullScreenPlay && (
             <button
               onClick={() => {
@@ -911,27 +928,31 @@ export const Arena: React.FC<ArenaProps> = ({
 
             <div className="relative z-10 flex flex-col items-center max-w-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
               {/* Stage Subtitle */}
-              <div 
-                className="text-xs font-mono-code font-bold uppercase tracking-widest"
-                style={{ color: primaryColor }}
-              >
-                Fase {level.id} · {level.name}
-              </div>
+              {uiCustomization?.showStartStageMetadata !== false && (
+                <div 
+                  className="text-xs font-mono-code font-bold uppercase tracking-widest"
+                  style={{ color: primaryColor }}
+                >
+                  Fase {level.id} · {level.name}
+                </div>
+              )}
 
               {/* Headline */}
               <div>
                 <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md text-balance">
-                  {isLivingRoomMode ? 'ELIMINE AS PRAGAS DA SALA' : 'ARENA DE REFLEXOS'}
+                  {uiCustomization?.startHeadline?.trim() ||
+                    (isLivingRoomMode ? 'ELIMINE AS PRAGAS DA SALA' : 'ARENA DE REFLEXOS')}
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-lg drop-shadow">
-                  {isLivingRoomMode
-                    ? 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!'
-                    : 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!'}
+                <p className="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-lg drop-shadow mx-auto">
+                  {uiCustomization?.startSubtitle?.trim() ||
+                    (isLivingRoomMode
+                      ? 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!'
+                      : 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!')}
                 </p>
               </div>
 
               {/* Pest Legend in Living Room Mode */}
-              {isLivingRoomMode && (
+              {isLivingRoomMode && uiCustomization?.showStartPestLegend !== false && (
                 <div className="grid grid-cols-4 gap-2 sm:gap-3 w-full max-w-md pt-1">
                   {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
                     <div
@@ -950,17 +971,19 @@ export const Arena: React.FC<ArenaProps> = ({
               )}
 
               {/* Stage Parameters Clean Metadata */}
-              <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono-code text-slate-300">
-                <span>{level.targetCount} Alvos</span>
-                <span aria-hidden="true">·</span>
-                <span>Tolerância: {level.baseDurationMs}ms</span>
-                {level.trapChance > 0 && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span className="text-red-300">Evite alvos proibidos</span>
-                  </>
-                )}
-              </div>
+              {uiCustomization?.showStartStageMetadata !== false && (
+                <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono-code text-slate-300">
+                  <span>{level.targetCount} Alvos</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Tolerância: {level.baseDurationMs}ms</span>
+                  {level.trapChance > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-red-300">Evite alvos proibidos</span>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Primary Start Game Button */}
               <button
@@ -973,12 +996,26 @@ export const Arena: React.FC<ArenaProps> = ({
                 }}
               >
                 <Play className="w-6 h-6 fill-slate-950" />
-                <span>Começar Jogo</span>
+                <span>{uiCustomization?.startButtonText?.trim() || 'Começar Jogo'}</span>
               </button>
 
-              <div className="text-[11px] text-slate-300 font-mono-code">
-                Toque no botão para iniciar
-              </div>
+              {uiCustomization?.startHelperText !== '' && (
+                <div className="text-[11px] text-slate-300 font-mono-code">
+                  {uiCustomization?.startHelperText ?? 'Toque no botão para iniciar'}
+                </div>
+              )}
+
+              {uiCustomization?.showInstallFramelessInStart && onInstallOrFrameless && (
+                <button
+                  type="button"
+                  onClick={onInstallOrFrameless}
+                  className="mt-1 px-4 py-2 rounded-xl text-xs font-mono-code border border-slate-700/80 bg-slate-900/75 hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
+                  style={{ color: primaryColor, borderColor: `${primaryColor}44` }}
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Instalar App / Modo Sem Barra</span>
+                </button>
+              )}
             </div>
           </div>
         )}

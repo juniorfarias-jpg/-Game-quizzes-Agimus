@@ -1,6 +1,6 @@
 import React from 'react';
-import { Crosshair, Trophy, Globe, Play, Volume2, VolumeX, Star, Zap, ShieldCheck, Lock, UserPlus } from 'lucide-react';
-import { PlayerStats, CompanyLogoConfig, BrandingColorsConfig } from '../types/game';
+import { Crosshair, Trophy, Globe, Play, Volume2, VolumeX, Star, Zap, ShieldCheck, UserPlus, Maximize2, Minimize2 } from 'lucide-react';
+import { PlayerStats, CompanyLogoConfig, BrandingColorsConfig, AppCustomizationConfig } from '../types/game';
 
 interface NavbarProps {
   activeTab: 'arena' | 'levels' | 'leaderboard' | 'gallery';
@@ -13,6 +13,9 @@ interface NavbarProps {
   onOpenCertificate: () => void;
   logo?: CompanyLogoConfig;
   branding?: BrandingColorsConfig;
+  uiCustomization?: AppCustomizationConfig;
+  isFrameless?: boolean;
+  onToggleFrameless?: () => void;
   onOpenRegistration?: () => void;
 }
 
@@ -27,10 +30,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCertificate,
   logo,
   branding,
+  uiCustomization,
+  isFrameless = false,
+  onToggleFrameless,
   onOpenRegistration,
 }) => {
   const totalStars = Object.values(stats.levelProgress).reduce((acc, p) => acc + p.stars, 0);
   const primaryColor = branding?.primaryColor || '#00d2ff';
+  const isMinimal = Boolean(uiCustomization?.minimalNavbar);
 
   return (
     <header className="w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
@@ -45,22 +52,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               <img
                 src={logo.logoUrl}
                 alt={logo.companyName || 'Logo'}
-                className="h-9 max-w-[120px] sm:max-w-[150px] object-contain rounded-lg p-0.5 bg-slate-900/60 border border-slate-700/60 group-hover:scale-105 transition-transform"
+                className="h-9 max-w-[140px] sm:max-w-[180px] object-contain rounded-lg p-0.5 group-hover:scale-105 transition-transform"
               />
-              <div className="hidden sm:block">
-                <div className="font-display font-black text-sm text-white tracking-wider flex items-center gap-1.5">
-                  <span>{logo.companyName || 'AGIMUS'}</span>
-                  <span 
-                    className="text-[9px] px-1.5 py-0.2 rounded font-mono-code font-bold uppercase tracking-wider"
-                    style={{ backgroundColor: `${primaryColor}25`, color: primaryColor }}
-                  >
-                    {logo.subTitle || 'REFLEX'}
-                  </span>
+              {!isMinimal && (
+                <div className="hidden sm:block">
+                  <div className="font-display font-black text-sm text-white tracking-wider flex items-center gap-1.5">
+                    <span>{logo.companyName || 'AGIMUS'}</span>
+                    <span 
+                      className="text-[9px] px-1.5 py-0.2 rounded font-mono-code font-bold uppercase tracking-wider"
+                      style={{ backgroundColor: `${primaryColor}25`, color: primaryColor }}
+                    >
+                      {logo.subTitle || 'REFLEX'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono-code">
+                    QUIOSQUE DE REAÇÃO RÁPIDA
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono-code">
-                  QUIOSQUE DE REAÇÃO RÁPIDA
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             <>
@@ -157,28 +166,53 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Stars Count */}
-          <div 
-            onClick={onOpenCertificate}
-            className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-xs cursor-pointer hover:border-amber-400/50 transition"
-            title="Ver Certificado de Piloto"
-          >
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span className="font-mono-code font-bold text-amber-300">{totalStars}★</span>
-          </div>
+          {/* Stars Count (Hidden in Minimal Mode unless Admin) */}
+          {(!isMinimal || isAdminLoggedIn) && (
+            <div 
+              onClick={onOpenCertificate}
+              className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-xs cursor-pointer hover:border-amber-400/50 transition"
+              title="Ver Certificado de Piloto"
+            >
+              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span className="font-mono-code font-bold text-amber-300">{totalStars}★</span>
+            </div>
+          )}
 
-          {/* Sound Toggle */}
-          <button
-            onClick={onToggleSound}
-            className="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
-            title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4" style={{ color: primaryColor }} />
-            ) : (
-              <VolumeX className="w-4 h-4 text-slate-500" />
-            )}
-          </button>
+          {/* Sound Toggle (Hidden in Minimal Mode unless Admin) */}
+          {(!isMinimal || isAdminLoggedIn) && (
+            <button
+              onClick={onToggleSound}
+              className="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
+              title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-4 h-4" style={{ color: primaryColor }} />
+              ) : (
+                <VolumeX className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+          )}
+
+          {/* Frameless / "Sem Barra" Button */}
+          {uiCustomization?.showFramelessButton !== false && onToggleFrameless && (
+            <button
+              onClick={onToggleFrameless}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition whitespace-nowrap"
+              style={{
+                borderColor: `${primaryColor}55`,
+                backgroundColor: `${primaryColor}14`,
+                color: primaryColor,
+              }}
+              title="Alternar Modo Sem Barra / Tela Cheia"
+            >
+              {isFrameless ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+              <span>{isFrameless ? 'Mostrar Barra' : 'Sem Barra'}</span>
+            </button>
+          )}
 
           {/* Admin Mode Button (Only visible if Admin is logged in) */}
           {isAdminLoggedIn && (
@@ -194,17 +228,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Player Badge */}
-          <div 
-            onClick={onOpenCertificate}
-            className="flex items-center gap-2 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-cyan-400/50 transition"
-            title="Clique para ver o Certificado do Jogador"
-          >
-            <span className="text-base">{stats.country}</span>
-            <span className="text-xs font-semibold text-white max-w-[80px] sm:max-w-[110px] truncate hidden sm:inline">
-              {stats.playerName}
-            </span>
-          </div>
+          {/* Player Badge (Hidden in Minimal Mode unless Admin) */}
+          {(!isMinimal || isAdminLoggedIn) && (
+            <div 
+              onClick={onOpenCertificate}
+              className="flex items-center gap-2 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-cyan-400/50 transition"
+              title="Clique para ver o Certificado do Jogador"
+            >
+              <span className="text-base">{stats.country}</span>
+              <span className="text-xs font-semibold text-white max-w-[80px] sm:max-w-[110px] truncate hidden sm:inline">
+                {stats.playerName}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </header>

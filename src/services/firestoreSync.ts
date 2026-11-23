@@ -51,6 +51,10 @@ export function subscribeToCloudSettings(
                 ...(cloudData.sceneConfig?.enabledPests || {}),
               },
             },
+            uiCustomization: {
+              ...DEFAULT_ADMIN_SETTINGS.uiCustomization,
+              ...(cloudData.uiCustomization || {}),
+            },
             branding: {
               ...DEFAULT_ADMIN_SETTINGS.branding,
               ...(cloudData.branding || {}),

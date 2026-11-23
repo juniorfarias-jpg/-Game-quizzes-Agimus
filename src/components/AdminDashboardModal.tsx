@@ -45,7 +45,8 @@ import {
   Briefcase,
   FileSpreadsheet,
   CheckCircle2,
-  Award
+  Award,
+  LayoutTemplate
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -77,7 +78,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onDeleteRegistration,
   onClearRegistrations,
 }) => {
-  const [activeTab, setActiveTab] = useState<'branding' | 'registration' | 'levels' | 'image' | 'endgame' | 'leaderboard' | 'security'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'layout' | 'registration' | 'levels' | 'image' | 'endgame' | 'leaderboard' | 'security'>('branding');
   const [settingsDraft, setSettingsDraft] = useState<AppAdminSettings>(adminSettings);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -102,6 +103,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoUrlInput, setLogoUrlInput] = useState('');
 
+  // Watermark file input
+  const watermarkInputRef = useRef<HTMLInputElement>(null);
+  const [watermarkUrlInput, setWatermarkUrlInput] = useState('');
+
   // End Game image file input
   const endGameFileInputRef = useRef<HTMLInputElement>(null);
   const [endGameUrlInput, setEndGameUrlInput] = useState('');
@@ -111,6 +116,85 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const showToast = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3500);
+  };
+
+  const handleWatermarkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSettingsDraft((prev) => ({
+          ...prev,
+          uiCustomization: {
+            ...prev.uiCustomization,
+            watermarkEnabled: true,
+            watermarkUseCompanyLogo: false,
+            watermarkUrl: reader.result as string,
+          },
+        }));
+        showToast('Imagem de marca d\'água carregada!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyFestivalPreset = () => {
+    setSettingsDraft((prev) => ({
+      ...prev,
+      branding: {
+        ...prev.branding,
+        primaryColor: '#00d2ff',
+        secondaryColor: '#0284c7',
+        backgroundColor: '#040915',
+        themePreset: 'agimus_blue',
+      },
+      sceneConfig: {
+        ...prev.sceneConfig,
+        mode: 'classic',
+      },
+      uiCustomization: {
+        ...prev.uiCustomization,
+        watermarkEnabled: true,
+        watermarkUseCompanyLogo: true,
+        watermarkOpacity: 0.08,
+        showNavbar: true,
+        minimalNavbar: true,
+        showFramelessButton: true,
+        startHeadline: 'PET FESTIVAL 2027',
+        startSubtitle: 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!',
+        startButtonText: 'START',
+        startHelperText: 'Toque no botão para iniciar a contagem regressiva',
+        showStartStageMetadata: false,
+        showStartPestLegend: false,
+        showInstallFramelessInStart: true,
+        showHudStageInfo: true,
+        showHudMetrics: true,
+        showHudSoundButton: true,
+      },
+    }));
+    showToast('Layout Minimalista / Festival aplicado! Clique em "Salvar na Nuvem" para confirmar.');
+  };
+
+  const handleApplyLivingRoomPreset = () => {
+    setSettingsDraft((prev) => ({
+      ...prev,
+      sceneConfig: {
+        ...prev.sceneConfig,
+        mode: 'living_room_pests',
+      },
+      uiCustomization: {
+        ...prev.uiCustomization,
+        minimalNavbar: false,
+        startHeadline: 'ELIMINE AS PRAGAS DA SALA',
+        startSubtitle: 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!',
+        startButtonText: 'COMEÇAR JOGO',
+        startHelperText: 'Toque no botão para iniciar',
+        showStartStageMetadata: true,
+        showStartPestLegend: true,
+      },
+    }));
+    showToast('Layout Sala com Gato & Pragas aplicado! Clique em "Salvar na Nuvem" para confirmar.');
   };
 
   const handleSaveAll = () => {
@@ -441,6 +525,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           >
             <Palette className="w-4 h-4" />
             <span>Cores & Logotipo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('layout')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'layout'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <LayoutTemplate className="w-4 h-4" />
+            <span>Textos & Layout Total</span>
           </button>
 
           <button
@@ -852,6 +948,316 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       Aplicar
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: TEXTOS, MARCA D'ÁGUA & LAYOUT TOTAL DO APP */}
+          {activeTab === 'layout' && (
+            <div className="space-y-6">
+              {/* 1-Click Presets */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-cyan-400" />
+                    <span>Modelos Prontos (1 Clique)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Aplique instantaneamente o visual minimalista de evento (com marca d&apos;água, barra limpa e botão START) ou o modo Sala com Gato & Pragas, e depois ajuste qualquer detalhe abaixo.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleApplyFestivalPreset}
+                    className="p-3.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-950/50 text-left transition"
+                  >
+                    <div className="text-xs font-bold text-cyan-300">
+                      Estilo Minimalista / Evento (Como Imagem)
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      Marca d&apos;água gigante no fundo, barra superior só com logo + &quot;Sem Barra&quot;, título customizado e botão START.
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyLivingRoomPreset}
+                    className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/25 hover:bg-amber-950/45 text-left transition"
+                  >
+                    <div className="text-xs font-bold text-amber-300">
+                      Estilo Sala com Gato & Pragas
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      Cenário doméstico com sofás, cadeirões, gatos andando e eliminação de pulgas, carraças, ovos e larvas.
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* App Title & Start Screen Texts */}
+              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-4">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                  Textos da Aplicação & Tela Inicial
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Título da Janela / Navegador:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.uiCustomization?.appTitle || ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: { ...prev.uiCustomization, appTitle: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: Kiosk Game - Pet Festival 2027"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Título Principal da Tela Inicial (deixe vazio para automático):
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.uiCustomization?.startHeadline || ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: { ...prev.uiCustomization, startHeadline: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: PET FESTIVAL 2027"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white font-display"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Subtítulo / Instrução na Tela Inicial (deixe vazio para automático):
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.uiCustomization?.startSubtitle || ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: { ...prev.uiCustomization, startSubtitle: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Texto do Botão Principal:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.uiCustomization?.startButtonText || ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: { ...prev.uiCustomization, startButtonText: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: START ou COMEÇAR JOGO"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white font-display font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Texto Auxiliar Abaixo do Botão (vazio para ocultar):
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsDraft.uiCustomization?.startHelperText ?? ''}
+                      onChange={(e) =>
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: { ...prev.uiCustomization, startHelperText: e.target.value },
+                        }))
+                      }
+                      placeholder="Ex: Toque no botão para iniciar a contagem regressiva"
+                      className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Background Watermark */}
+              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Marca d&apos;Água Gigante no Fundo da Página
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Exibe o logotipo da empresa (ou outra imagem) centralizado e translúcido atrás de toda a tela.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(settingsDraft.uiCustomization?.watermarkEnabled)}
+                    onChange={(e) =>
+                      setSettingsDraft((prev) => ({
+                        ...prev,
+                        uiCustomization: { ...prev.uiCustomization, watermarkEnabled: e.target.checked },
+                      }))
+                    }
+                    className="w-5 h-5 accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                {settingsDraft.uiCustomization?.watermarkEnabled && (
+                  <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.uiCustomization?.watermarkUseCompanyLogo !== false}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              uiCustomization: {
+                                ...prev.uiCustomization,
+                                watermarkUseCompanyLogo: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Usar o mesmo Logotipo configurado em &quot;Cores & Logotipo&quot;</span>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">
+                          Opacidade: {Math.round((settingsDraft.uiCustomization?.watermarkOpacity ?? 0.08) * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min={2}
+                          max={35}
+                          value={Math.round((settingsDraft.uiCustomization?.watermarkOpacity ?? 0.08) * 100)}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              uiCustomization: {
+                                ...prev.uiCustomization,
+                                watermarkOpacity: Number(e.target.value) / 100,
+                              },
+                            }))
+                          }
+                          className="w-28 accent-cyan-400"
+                        />
+                      </div>
+                    </div>
+
+                    {settingsDraft.uiCustomization?.watermarkUseCompanyLogo === false && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <input
+                            ref={watermarkInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleWatermarkUpload}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => watermarkInputRef.current?.click()}
+                            className="w-full py-2 px-3 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center gap-1.5 transition"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Carregar Imagem para Marca d&apos;Água</span>
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={watermarkUrlInput}
+                            onChange={(e) => setWatermarkUrlInput(e.target.value)}
+                            placeholder="Ou cole a URL da imagem de fundo..."
+                            className="flex-1 px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!watermarkUrlInput.trim()) return;
+                              setSettingsDraft((prev) => ({
+                                ...prev,
+                                uiCustomization: {
+                                  ...prev.uiCustomization,
+                                  watermarkUrl: watermarkUrlInput.trim(),
+                                },
+                              }));
+                              setWatermarkUrlInput('');
+                              showToast('URL da marca d\'água aplicada!');
+                            }}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition"
+                          >
+                            Aplicar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Visibility Toggles for Entire App */}
+              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                  Visibilidade dos Elementos da Interface
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  {(
+                    [
+                      ['showNavbar', 'Exibir Barra Superior (Cabeçalho)'],
+                      ['minimalNavbar', 'Cabeçalho Minimalista (só Logo + Sem Barra)'],
+                      ['showFramelessButton', 'Botão "Sem Barra" no Cabeçalho'],
+                      ['showInstallFramelessInStart', 'Botão "Instalar App / Modo Sem Barra" no Início'],
+                      ['showStartStageMetadata', 'Exibir Fase e Alvos na Tela Inicial'],
+                      ['showStartPestLegend', 'Exibir Miniaturas das Pragas na Tela Inicial'],
+                      ['showHudStageInfo', 'Exibir Info da Fase no Topo da Arena'],
+                      ['showHudMetrics', 'Exibir Reação, Combo, Precisão e Pontos'],
+                      ['showHudSoundButton', 'Exibir Botão de Áudio no Topo da Arena'],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex items-center justify-between gap-3 p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700"
+                    >
+                      <span className="text-slate-200">{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settingsDraft.uiCustomization?.[key])}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            uiCustomization: {
+                              ...prev.uiCustomization,
+                              [key]: e.target.checked,
+                            },
+                          }))
+                        }
+                        className="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0"
+                      />
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>

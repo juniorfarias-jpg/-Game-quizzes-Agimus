@@ -104,6 +104,27 @@ export interface EndGameImageConfig {
   ctaText?: string; // e.g. 'Jogar Novamente'
 }
 
+export interface AppCustomizationConfig {
+  appTitle: string;
+  watermarkEnabled: boolean;
+  watermarkUseCompanyLogo: boolean;
+  watermarkUrl?: string;
+  watermarkOpacity: number; // 0.02 to 0.35
+  showNavbar: boolean;
+  minimalNavbar: boolean;
+  showFramelessButton: boolean;
+  startHeadline: string;
+  startSubtitle: string;
+  startButtonText: string;
+  startHelperText: string;
+  showStartStageMetadata: boolean;
+  showStartPestLegend: boolean;
+  showInstallFramelessInStart: boolean;
+  showHudStageInfo: boolean;
+  showHudMetrics: boolean;
+  showHudSoundButton: boolean;
+}
+
 export interface AppAdminSettings {
   passwordHash: string; // Master administrator password
   lockEntireAppWithPassword: boolean; // Require password to access and play the game
@@ -111,6 +132,7 @@ export interface AppAdminSettings {
   customTargetImage: CustomTargetImageConfig;
   endGameImage: EndGameImageConfig;
   sceneConfig: ArenaSceneConfig;
+  uiCustomization: AppCustomizationConfig;
   customLevelConfigs: Record<number, Partial<LevelConfig>>;
   tournamentMode: boolean; // Strict tournament mode: disables dev cheats
   adminDisplayName: string;
