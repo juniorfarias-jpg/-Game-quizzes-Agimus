@@ -8,13 +8,14 @@ import {
   BrandingColorsConfig,
   CompanyLogoConfig,
   RegistrationFormConfig,
-  PestKind
+  PestKind,
+  RoomThemeId
 } from '../types/game';
 import { LEVELS } from '../utils/levels';
 import { updateAdminPassword } from '../utils/adminStorage';
 import { THEME_PRESETS } from '../utils/brandingPresets';
+import { ROOM_THEMES, getRoomSceneImage } from '../utils/roomThemes';
 import { PestSprite, PEST_META } from './PestSprite';
-import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
 import { 
   ShieldCheck, 
   Settings, 
@@ -123,6 +124,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   // App Background image file input
   const bgImageInputRef = useRef<HTMLInputElement>(null);
   const [bgImageUrlInput, setBgImageUrlInput] = useState('');
+
+  // Room custom scene background file input
+  const roomBgInputRef = useRef<HTMLInputElement>(null);
+  const [roomBgUrlInput, setRoomBgUrlInput] = useState('');
 
   if (!isOpen) return null;
 
@@ -2154,9 +2159,15 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <div className="relative flex-1 p-3 flex flex-col items-center justify-center text-center overflow-hidden">
                       {settingsDraft.sceneConfig?.mode === 'living_room_pests' && (
                         <img
-                          src={settingsDraft.sceneConfig.customBackgroundUrl || livingRoomCatImg}
+                          src={
+                            settingsDraft.sceneConfig.customBackgroundUrl ||
+                            getRoomSceneImage(
+                              settingsDraft.sceneConfig?.roomTheme,
+                              mobilePreviewOrientation === 'portrait'
+                            )
+                          }
                           alt=""
-                          className="absolute inset-0 w-full h-full object-cover opacity-35"
+                          className="absolute inset-0 w-full h-full object-cover opacity-40"
                         />
                       )}
                       <div className="relative z-10 flex flex-col items-center gap-1.5">
@@ -2704,7 +2715,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     }`}
                   >
                     <img
-                      src={settingsDraft.sceneConfig?.customBackgroundUrl || livingRoomCatImg}
+                      src={
+                        settingsDraft.sceneConfig?.customBackgroundUrl ||
+                        getRoomSceneImage(
+                          settingsDraft.sceneConfig?.roomTheme,
+                          settingsDraft.uiCustomization?.screenOrientation !== 'horizontal'
+                        )
+                      }
                       alt="Sala com gato"
                       className="w-16 h-12 rounded-lg object-cover border border-slate-700 shrink-0"
                     />
@@ -2749,70 +2766,272 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </button>
                 </div>
 
-                {/* Living room pest options */}
+                {/* Room Themes & Living room pest options */}
                 {settingsDraft.sceneConfig?.mode === 'living_room_pests' && (
-                  <div className="pt-3 border-t border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-200">
-                        Pragas ativas para eliminar na sala:
-                      </span>
-                      <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={settingsDraft.sceneConfig?.showPestLabels !== false}
-                          onChange={(e) =>
-                            setSettingsDraft((prev) => ({
-                              ...prev,
-                              sceneConfig: {
-                                ...prev.sceneConfig,
-                                showPestLabels: e.target.checked,
-                              },
-                            }))
-                          }
-                          className="accent-cyan-400"
-                        />
-                        <span>Mostrar nome da praga no alvo</span>
-                      </label>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => {
-                        const active = settingsDraft.sceneConfig?.enabledPests?.[kind] !== false;
-                        return (
-                          <label
-                            key={kind}
-                            className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition ${
-                              active
-                                ? 'bg-slate-900 border-cyan-500/50 text-white'
-                                : 'bg-slate-950/60 border-slate-800 text-slate-500'
-                            }`}
+                  <div className="pt-4 border-t border-slate-800 space-y-5">
+                    {/* Room Theme Picker (Vertical 9:16 & Horizontal 16:9) */}
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                            Temas de Sala do Jogo (Vertical 9:16 & Horizontal 16:9)
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            Cada tema possui versão na proporção Vertical e Horizontal, aplicada automaticamente conforme a orientação do ecrã ({settingsDraft.uiCustomization?.screenOrientation === 'horizontal' ? 'Horizontal 16:9 ativo' : 'Vertical 9:16 ativo'}).
+                          </div>
+                        </div>
+                        {settingsDraft.sceneConfig?.customBackgroundUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSettingsDraft((prev) => ({
+                                ...prev,
+                                sceneConfig: {
+                                  ...prev.sceneConfig,
+                                  customBackgroundUrl: '',
+                                },
+                              }));
+                              showToast('Fundo personalizado removido; tema da sala restaurado!');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[11px] font-semibold hover:bg-amber-500/25 transition"
                           >
-                            <input
-                              type="checkbox"
-                              checked={active}
-                              onChange={(e) =>
+                            Usar Tema Selecionado (Remover Fundo Manual)
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {ROOM_THEMES.map((roomTheme) => {
+                          const selectedId: RoomThemeId =
+                            settingsDraft.sceneConfig?.roomTheme || 'living_room_classic';
+                          const isSelected =
+                            selectedId === roomTheme.id &&
+                            !settingsDraft.sceneConfig?.customBackgroundUrl;
+                          const isVerticalActive =
+                            settingsDraft.uiCustomization?.screenOrientation !== 'horizontal';
+
+                          return (
+                            <button
+                              key={roomTheme.id}
+                              type="button"
+                              onClick={() => {
                                 setSettingsDraft((prev) => ({
                                   ...prev,
                                   sceneConfig: {
                                     ...prev.sceneConfig,
-                                    enabledPests: {
-                                      ...prev.sceneConfig.enabledPests,
-                                      [kind]: e.target.checked,
-                                    },
+                                    mode: 'living_room_pests',
+                                    roomTheme: roomTheme.id,
+                                    customBackgroundUrl: '',
                                   },
-                                }))
+                                }));
+                                showToast(`Tema "${roomTheme.name}" selecionado (Vertical & Horizontal)!`);
+                              }}
+                              className={`p-3 rounded-xl border text-left transition flex flex-col gap-2.5 ${
+                                isSelected
+                                  ? 'bg-cyan-950/45 border-cyan-400 shadow-lg'
+                                  : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                              }`}
+                            >
+                              {/* Dual Aspect Preview: Vertical 9:16 + Horizontal 16:9 */}
+                              <div className="flex items-end gap-2 w-full">
+                                <div
+                                  className={`relative w-12 aspect-[9/16] rounded-lg overflow-hidden border shrink-0 bg-slate-900 ${
+                                    isVerticalActive
+                                      ? 'border-cyan-400 ring-1 ring-cyan-400/50'
+                                      : 'border-slate-700 opacity-85'
+                                  }`}
+                                >
+                                  <img
+                                    src={roomTheme.verticalImage}
+                                    alt={`${roomTheme.name} Vertical 9:16`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <span className="absolute bottom-0.5 inset-x-0.5 text-[8px] font-mono-code font-bold text-center bg-slate-950/85 text-white rounded py-0.2">
+                                    9:16
+                                  </span>
+                                </div>
+
+                                <div
+                                  className={`relative flex-1 aspect-[16/9] rounded-lg overflow-hidden border bg-slate-900 ${
+                                    !isVerticalActive
+                                      ? 'border-cyan-400 ring-1 ring-cyan-400/50'
+                                      : 'border-slate-700 opacity-85'
+                                  }`}
+                                >
+                                  <img
+                                    src={roomTheme.horizontalImage}
+                                    alt={`${roomTheme.name} Horizontal 16:9`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <span className="absolute bottom-0.5 right-1 text-[8px] font-mono-code font-bold px-1 bg-slate-950/85 text-white rounded">
+                                    16:9
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span className="truncate">{roomTheme.name}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
+                                    {roomTheme.subtitle}
+                                  </div>
+                                </div>
+                                {isSelected ? (
+                                  <span className="w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center shrink-0">
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[9px] font-mono-code text-slate-300 shrink-0">
+                                    {roomTheme.badge}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Optional custom room background override */}
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="text-[11px] text-slate-300 font-semibold shrink-0">
+                          Ou imagem própria da sala (opcional):
+                        </div>
+                        <div className="flex flex-1 gap-2">
+                          <input
+                            ref={roomBgInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                const result = ev.target?.result as string;
+                                if (result) {
+                                  setSettingsDraft((prev) => ({
+                                    ...prev,
+                                    sceneConfig: {
+                                      ...prev.sceneConfig,
+                                      mode: 'living_room_pests',
+                                      customBackgroundUrl: result,
+                                    },
+                                  }));
+                                  showToast('Foto personalizada da sala aplicada!');
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => roomBgInputRef.current?.click()}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-200 font-semibold flex items-center gap-1.5 shrink-0 transition"
+                          >
+                            <Upload className="w-3 h-3 text-cyan-400" />
+                            Carregar Foto
+                          </button>
+                          <input
+                            type="text"
+                            value={roomBgUrlInput}
+                            onChange={(e) => setRoomBgUrlInput(e.target.value)}
+                            placeholder="https://exemplo.com/sala.jpg"
+                            className="flex-1 min-w-0 px-2.5 py-1 text-[11px] bg-slate-900 border border-slate-700 rounded-lg text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!roomBgUrlInput.trim()) return;
+                              try {
+                                new URL(roomBgUrlInput.trim());
+                                setSettingsDraft((prev) => ({
+                                  ...prev,
+                                  sceneConfig: {
+                                    ...prev.sceneConfig,
+                                    mode: 'living_room_pests',
+                                    customBackgroundUrl: roomBgUrlInput.trim(),
+                                  },
+                                }));
+                                setRoomBgUrlInput('');
+                                showToast('URL de fundo da sala aplicada!');
+                              } catch {
+                                showToast('URL inválida.');
                               }
-                              className="accent-cyan-400"
-                            />
-                            <div className="w-6 h-6 shrink-0">
-                              <PestSprite pestKind={kind} showLabel={false} />
-                            </div>
-                            <span className="text-[11px] font-semibold truncate">
-                              {PEST_META[kind].label}
-                            </span>
-                          </label>
-                        );
-                      })}
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-cyan-300 border border-slate-700 shrink-0 transition"
+                          >
+                            Usar URL
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pest Checkboxes */}
+                    <div className="pt-3 border-t border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-200">
+                          Pragas ativas para eliminar na sala:
+                        </span>
+                        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.sceneConfig?.showPestLabels !== false}
+                            onChange={(e) =>
+                              setSettingsDraft((prev) => ({
+                                ...prev,
+                                sceneConfig: {
+                                  ...prev.sceneConfig,
+                                  showPestLabels: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="accent-cyan-400"
+                          />
+                          <span>Mostrar nome da praga no alvo</span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => {
+                          const active = settingsDraft.sceneConfig?.enabledPests?.[kind] !== false;
+                          return (
+                            <label
+                              key={kind}
+                              className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition ${
+                                active
+                                  ? 'bg-slate-900 border-cyan-500/50 text-white'
+                                  : 'bg-slate-950/60 border-slate-800 text-slate-500'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={active}
+                                onChange={(e) =>
+                                  setSettingsDraft((prev) => ({
+                                    ...prev,
+                                    sceneConfig: {
+                                      ...prev.sceneConfig,
+                                      enabledPests: {
+                                        ...prev.sceneConfig.enabledPests,
+                                        [kind]: e.target.checked,
+                                      },
+                                    },
+                                  }))
+                                }
+                                className="accent-cyan-400"
+                              />
+                              <div className="w-6 h-6 shrink-0">
+                                <PestSprite pestKind={kind} showLabel={false} />
+                              </div>
+                              <span className="text-[11px] font-semibold truncate">
+                                {PEST_META[kind].label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}

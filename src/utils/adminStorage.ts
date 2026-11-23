@@ -23,6 +23,7 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
   },
   sceneConfig: {
     mode: 'living_room_pests',
+    roomTheme: 'living_room_classic',
     customBackgroundUrl: '',
     enabledPests: {
       flea: true,

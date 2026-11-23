@@ -17,8 +17,11 @@ export type PestKind = 'flea' | 'tick' | 'flea_egg' | 'flea_larva';
 
 export type ArenaSceneMode = 'living_room_pests' | 'classic';
 
+export type RoomThemeId = 'living_room_classic' | 'cozy_bedroom' | 'sunlit_lounge';
+
 export interface ArenaSceneConfig {
   mode: ArenaSceneMode;
+  roomTheme?: RoomThemeId;
   customBackgroundUrl?: string;
   enabledPests: {
     flea: boolean;

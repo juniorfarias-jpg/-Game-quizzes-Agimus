@@ -19,7 +19,7 @@ import { TargetFigure } from './TargetFigure';
 import { CustomCrosshair } from './CustomCrosshair';
 import { PestSprite, PEST_META } from './PestSprite';
 import { WalkingCats } from './WalkingCats';
-import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
+import { getRoomTheme, getRoomSceneImage } from '../utils/roomThemes';
 import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2, Maximize2, Smartphone, X } from 'lucide-react';
 
 interface ArenaProps {
@@ -85,14 +85,6 @@ const NEON_COLORS = [
 
 const SHAPES: FigureShapeType[] = ['circle', 'star', 'diamond', 'hexagon', 'triangle'];
 
-// Hotspots calibrated to the living room illustration (sofa, cat, left/right armchairs, rug & floor)
-const LIVING_ROOM_HOTSPOTS: { xMin: number; xMax: number; yMin: number; yMax: number; weight: number }[] = [
-  { xMin: 32, xMax: 44, yMin: 55, yMax: 67, weight: 2 }, // Tabby cat resting on sofa
-  { xMin: 22, xMax: 62, yMin: 47, yMax: 70, weight: 3 }, // Beige sofa & cushions
-  { xMin: 8, xMax: 25, yMin: 53, yMax: 84, weight: 2 },  // Teal armchair (left)
-  { xMin: 75, xMax: 92, yMin: 50, yMax: 80, weight: 2 }, // Mustard armchair (right)
-  { xMin: 26, xMax: 86, yMin: 68, yMax: 90, weight: 3 }, // Area rug & wooden floor
-];
 
 export const Arena: React.FC<ArenaProps> = ({
   level,
@@ -306,6 +298,12 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const isLivingRoomMode =
     sceneConfig?.mode === 'living_room_pests' && !(customImage?.enabled && customImage.imageUrl);
+  const isVerticalMode = screenOrientation === 'vertical';
+  const useVerticalSceneImg = isVerticalMode || (isMobileViewport && isPortrait);
+  const activeRoomTheme = getRoomTheme(sceneConfig?.roomTheme);
+  const activeRoomImageUrl =
+    sceneConfig?.customBackgroundUrl ||
+    getRoomSceneImage(sceneConfig?.roomTheme, useVerticalSceneImg);
 
   // Target spawner logic
   const spawnTarget = useCallback(() => {
@@ -372,10 +370,13 @@ export const Arena: React.FC<ArenaProps> = ({
       let y = isMobileViewport ? 16 + Math.random() * 68 : 14 + Math.random() * 72;
 
       if (isLivingRoomMode) {
-        const totalWeight = LIVING_ROOM_HOTSPOTS.reduce((acc, h) => acc + h.weight, 0);
+        const activeHotspots = useVerticalSceneImg
+          ? activeRoomTheme.verticalHotspots
+          : activeRoomTheme.horizontalHotspots;
+        const totalWeight = activeHotspots.reduce((acc, h) => acc + h.weight, 0);
         let roll = Math.random() * totalWeight;
-        let chosen = LIVING_ROOM_HOTSPOTS[0];
-        for (const spot of LIVING_ROOM_HOTSPOTS) {
+        let chosen = activeHotspots[0];
+        for (const spot of activeHotspots) {
           roll -= spot.weight;
           if (roll <= 0) {
             chosen = spot;
@@ -431,7 +432,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       return prev + 1;
     });
-  }, [gameState, level, isLivingRoomMode, sceneConfig, devOverrides, isMobileViewport, mobileConfig]);
+  }, [gameState, level, isLivingRoomMode, sceneConfig, devOverrides, isMobileViewport, mobileConfig, useVerticalSceneImg, activeRoomTheme]);
 
   // Schedule next spawns while playing
   useEffect(() => {
@@ -756,7 +757,6 @@ export const Arena: React.FC<ArenaProps> = ({
     : 0;
 
   const isFullScreenPlay = gameState === 'countdown' || gameState === 'playing';
-  const isVerticalMode = screenOrientation === 'vertical';
   const showCrosshair =
     isHoveringArena &&
     gameState === 'playing' &&
@@ -945,12 +945,12 @@ export const Arena: React.FC<ArenaProps> = ({
           screenShake ? 'scale-[0.98] border-red-500 translate-x-1 translate-y-1' : 'border-indigo-500/20'
         }`}
       >
-        {/* Living Room Background Scene (Sofás, Cadeirões, Tapete & Gato + Gatos a Andar) */}
+        {/* Room Background Scene (Vertical 9:16 / Horizontal 16:9 + Gatos a Andar) */}
         {isLivingRoomMode ? (
           <>
             <img
-              src={sceneConfig?.customBackgroundUrl || livingRoomCatImg}
-              alt="Sala de estar com sofás, cadeirões e gato"
+              src={activeRoomImageUrl}
+              alt={`${activeRoomTheme.name} com móveis e gato`}
               className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
               referrerPolicy="no-referrer"
             />
