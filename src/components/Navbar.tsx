@@ -174,8 +174,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Desktop Primary Navigation Tabs (Only visible when Admin is logged in) */}
-        {isAdminLoggedIn && (
+        {/* Desktop Primary Navigation Tabs (Only visible when Admin is logged in AND enabled in panel) */}
+        {isAdminLoggedIn && Boolean(uiCustomization?.showNavbarTabs) && (
           <nav className="hidden md:flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl">
             <button
               onClick={() => onSelectTab('arena')}
@@ -232,99 +232,108 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Right Status / Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* Quick Registration Button (Only when Admin is logged in) */}
-          {isAdminLoggedIn && onOpenRegistration && (
-            <button
-              onClick={onOpenRegistration}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-700 transition"
-              title="Formulário de Inscrição do Jogador"
-            >
-              <UserPlus className="w-3.5 h-3.5" style={{ color: primaryColor }} />
-              <span>Inscrição</span>
-            </button>
-          )}
+        {(
+          (isAdminLoggedIn && Boolean(uiCustomization?.showNavbarRegistrationButton) && Boolean(onOpenRegistration)) ||
+          Boolean(uiCustomization?.showNavbarStars) ||
+          Boolean(uiCustomization?.showNavbarSoundButton) ||
+          (Boolean(uiCustomization?.showFramelessButton) && Boolean(onToggleFrameless)) ||
+          (isAdminLoggedIn && Boolean(uiCustomization?.showNavbarAdminBadge)) ||
+          Boolean(uiCustomization?.showNavbarPlayerBadge)
+        ) && (
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Quick Registration Button */}
+            {isAdminLoggedIn && Boolean(uiCustomization?.showNavbarRegistrationButton) && onOpenRegistration && (
+              <button
+                onClick={onOpenRegistration}
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-700 transition"
+                title="Formulário de Inscrição do Jogador"
+              >
+                <UserPlus className="w-3.5 h-3.5" style={{ color: primaryColor }} />
+                <span>Inscrição</span>
+              </button>
+            )}
 
-          {/* Stars Count (Hidden in Minimal Mode unless Admin) */}
-          {(!isMinimal || isAdminLoggedIn) && (
-            <div 
-              onClick={onOpenCertificate}
-              className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-xs cursor-pointer hover:border-amber-400/50 transition"
-              title="Ver Certificado de Piloto"
-            >
-              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span className="font-mono-code font-bold text-amber-300">{totalStars}★</span>
-            </div>
-          )}
+            {/* Stars Count */}
+            {Boolean(uiCustomization?.showNavbarStars) && (
+              <div 
+                onClick={onOpenCertificate}
+                className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-xs cursor-pointer hover:border-amber-400/50 transition"
+                title="Ver Certificado de Piloto"
+              >
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <span className="font-mono-code font-bold text-amber-300">{totalStars}★</span>
+              </div>
+            )}
 
-          {/* Sound Toggle (Hidden in Minimal Mode unless Admin) */}
-          {(!isMinimal || isAdminLoggedIn) && (
-            <button
-              onClick={onToggleSound}
-              className="min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
-              title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
-            >
-              {soundEnabled ? (
-                <Volume2 className="w-4 h-4" style={{ color: primaryColor }} />
-              ) : (
-                <VolumeX className="w-4 h-4 text-slate-500" />
-              )}
-            </button>
-          )}
+            {/* Sound Toggle */}
+            {Boolean(uiCustomization?.showNavbarSoundButton) && (
+              <button
+                onClick={onToggleSound}
+                className="min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
+                title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-4 h-4" style={{ color: primaryColor }} />
+                ) : (
+                  <VolumeX className="w-4 h-4 text-slate-500" />
+                )}
+              </button>
+            )}
 
-          {/* Frameless / "Sem Barra" Button */}
-          {uiCustomization?.showFramelessButton !== false && onToggleFrameless && (
-            <button
-              onClick={onToggleFrameless}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-[11px] sm:text-xs font-semibold border transition whitespace-nowrap"
-              style={{
-                borderColor: `${primaryColor}55`,
-                backgroundColor: `${primaryColor}14`,
-                color: primaryColor,
-              }}
-              title="Alternar Modo Sem Barra / Tela Cheia"
-            >
-              {isFrameless ? (
-                <Minimize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5" />
-              )}
-              <span>{isFrameless ? 'Mostrar Barra' : 'Sem Barra'}</span>
-            </button>
-          )}
+            {/* Frameless / "Sem Barra" Button */}
+            {Boolean(uiCustomization?.showFramelessButton) && onToggleFrameless && (
+              <button
+                onClick={onToggleFrameless}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-[11px] sm:text-xs font-semibold border transition whitespace-nowrap"
+                style={{
+                  borderColor: `${primaryColor}55`,
+                  backgroundColor: `${primaryColor}14`,
+                  color: primaryColor,
+                }}
+                title="Alternar Modo Sem Barra / Tela Cheia"
+              >
+                {isFrameless ? (
+                  <Minimize2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Maximize2 className="w-3.5 h-3.5" />
+                )}
+                <span>{isFrameless ? 'Mostrar Barra' : 'Sem Barra'}</span>
+              </button>
+            )}
 
-          {/* Admin Mode Button (Only visible if Admin is logged in) */}
-          {isAdminLoggedIn && (
-            <button
-              onClick={onOpenAdmin}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-xs font-semibold border bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition"
-              title="Modo Administrador Ativo (Clique para abrir painel)"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-mono-code font-bold text-[11px] hidden sm:inline">
-                ADMIN
-              </span>
-            </button>
-          )}
+            {/* Admin Mode Button */}
+            {isAdminLoggedIn && Boolean(uiCustomization?.showNavbarAdminBadge) && (
+              <button
+                onClick={onOpenAdmin}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-xs font-semibold border bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition"
+                title="Modo Administrador Ativo (Clique para abrir painel)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="font-mono-code font-bold text-[11px] hidden sm:inline">
+                  ADMIN
+                </span>
+              </button>
+            )}
 
-          {/* Player Badge (Hidden in Minimal Mode unless Admin) */}
-          {(!isMinimal || isAdminLoggedIn) && (
-            <div 
-              onClick={onOpenCertificate}
-              className="flex items-center gap-2 px-2 sm:px-2.5 py-1 min-h-[38px] sm:min-h-[36px] bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-cyan-400/50 transition"
-              title="Clique para ver o Certificado do Jogador"
-            >
-              <span className="text-base">{stats.country}</span>
-              <span className="text-xs font-semibold text-white max-w-[70px] sm:max-w-[110px] truncate hidden sm:inline">
-                {stats.playerName}
-              </span>
-            </div>
-          )}
-        </div>
+            {/* Player Badge */}
+            {Boolean(uiCustomization?.showNavbarPlayerBadge) && (
+              <div 
+                onClick={onOpenCertificate}
+                className="flex items-center gap-2 px-2 sm:px-2.5 py-1 min-h-[38px] sm:min-h-[36px] bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-cyan-400/50 transition"
+                title="Clique para ver o Certificado do Jogador"
+              >
+                <span className="text-base">{stats.country}</span>
+                <span className="text-xs font-semibold text-white max-w-[70px] sm:max-w-[110px] truncate hidden sm:inline">
+                  {stats.playerName}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Mobile Admin Navigation Strip (prevents header overflow on smartphones) */}
-      {isAdminLoggedIn && (
+      {/* Mobile Admin Navigation Strip (only when Admin is logged in AND tabs enabled) */}
+      {isAdminLoggedIn && Boolean(uiCustomization?.showNavbarTabs) && (
         <nav className="md:hidden border-t border-slate-800/80 px-2 py-1.5 grid grid-cols-4 gap-1 bg-slate-950/60">
           {[
             { id: 'arena' as const, label: 'Jogar', icon: Play },

@@ -888,49 +888,55 @@ export const Arena: React.FC<ArenaProps> = ({
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {isAdminLoggedIn && onOpenControlPanel && (
-            <button
-              onClick={onOpenControlPanel}
-              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[36px] text-slate-300 hover:text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 rounded-lg transition-colors border border-cyan-500/30 shadow-sm"
-              title="Painel de Controle Oculto (ALT + C)"
-            >
-              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline text-[10px] font-mono-code font-bold tracking-wider">PAINEL</span>
-            </button>
-          )}
+        {(
+          (isAdminLoggedIn && Boolean(uiCustomization?.showHudAdminControls)) ||
+          Boolean(uiCustomization?.showHudSoundButton) ||
+          (isAdminLoggedIn && isFullScreenPlay)
+        ) && (
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {isAdminLoggedIn && Boolean(uiCustomization?.showHudAdminControls) && onOpenControlPanel && (
+              <button
+                onClick={onOpenControlPanel}
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[36px] text-slate-300 hover:text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 rounded-lg transition-colors border border-cyan-500/30 shadow-sm"
+                title="Painel de Controle Oculto (ALT + C)"
+              >
+                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline text-[10px] font-mono-code font-bold tracking-wider">PAINEL</span>
+              </button>
+            )}
 
-          {uiCustomization?.showHudSoundButton !== false && (
-            <button
-              onClick={onToggleSound}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
-              title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-            </button>
-          )}
-          {isAdminLoggedIn && isFullScreenPlay && (
-            <button
-              onClick={() => {
-                tryExitFullscreen();
-                onRestart();
-              }}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
-              title="Sair da Tela Cheia (Admin)"
-            >
-              <Minimize2 className="w-4 h-4" />
-            </button>
-          )}
-          {isAdminLoggedIn && (
-            <button
-              onClick={onRestart}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
-              title="Reiniciar Fase (Admin)"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+            {Boolean(uiCustomization?.showHudSoundButton) && (
+              <button
+                onClick={onToggleSound}
+                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+                title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+              </button>
+            )}
+            {isAdminLoggedIn && isFullScreenPlay && (
+              <button
+                onClick={() => {
+                  tryExitFullscreen();
+                  onRestart();
+                }}
+                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+                title="Sair da Tela Cheia (Admin)"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+            )}
+            {isAdminLoggedIn && Boolean(uiCustomization?.showHudAdminControls) && (
+              <button
+                onClick={onRestart}
+                className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+                title="Reiniciar Fase (Admin)"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Interactive Arena Area */}

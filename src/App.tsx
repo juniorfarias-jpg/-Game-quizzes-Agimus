@@ -698,8 +698,8 @@ export default function App() {
               primaryColor={primaryColor}
             />
 
-            {/* Admin-Only Controls & Level Switcher (Hidden for normal kiosk users) */}
-            {isAdminLoggedIn && (
+            {/* Admin-Only Controls & Level Switcher (Hidden by default; toggleable in Admin Panel) */}
+            {isAdminLoggedIn && Boolean(uiCustom?.showBottomAdminBar) && (
               <div className="space-y-3 mt-6 animate-in fade-in duration-200">
                 {/* Quick Level Switcher Below Arena */}
                 <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">

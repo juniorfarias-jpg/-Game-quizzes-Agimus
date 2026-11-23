@@ -221,17 +221,25 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         watermarkOpacity: 0.08,
         showNavbar: true,
         minimalNavbar: true,
-        showFramelessButton: true,
+        showNavbarTabs: false,
+        showNavbarRegistrationButton: false,
+        showNavbarStars: false,
+        showNavbarSoundButton: false,
+        showFramelessButton: false,
+        showNavbarAdminBadge: false,
+        showNavbarPlayerBadge: false,
         startHeadline: 'PET FESTIVAL 2027',
         startSubtitle: 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!',
         startButtonText: 'START',
         startHelperText: 'Toque no botão para iniciar a contagem regressiva',
         showStartStageMetadata: false,
         showStartPestLegend: false,
-        showInstallFramelessInStart: true,
+        showInstallFramelessInStart: false,
         showHudStageInfo: true,
         showHudMetrics: true,
-        showHudSoundButton: true,
+        showHudSoundButton: false,
+        showHudAdminControls: false,
+        showBottomAdminBar: false,
       },
     }));
     showToast('Layout Minimalista / Festival aplicado! Clique em "Salvar na Nuvem" para confirmar.');
@@ -246,7 +254,17 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       },
       uiCustomization: {
         ...prev.uiCustomization,
-        minimalNavbar: false,
+        minimalNavbar: true,
+        showNavbarTabs: false,
+        showNavbarRegistrationButton: false,
+        showNavbarStars: false,
+        showNavbarSoundButton: false,
+        showFramelessButton: false,
+        showNavbarAdminBadge: false,
+        showNavbarPlayerBadge: false,
+        showHudSoundButton: false,
+        showHudAdminControls: false,
+        showBottomAdminBar: false,
         startHeadline: 'ELIMINE AS PRAGAS DA SALA',
         startSubtitle: 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!',
         startButtonText: 'COMEÇAR JOGO',
@@ -1762,46 +1780,151 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               </div>
 
               {/* Visibility Toggles for Entire App */}
-              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
-                  Visibilidade dos Elementos da Interface
-                </h4>
+              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Visibilidade dos Elementos da Interface
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Oculte ou exiba barras, menus, botões de áudio e atalhos de administrador. (O painel abre sempre com <kbd className="px-1 py-0.2 bg-slate-800 rounded text-cyan-300 font-mono-code">ALT+C</kbd> ou segurando o logotipo por 1,5s).
+                    </p>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                  {(
-                    [
-                      ['showNavbar', 'Exibir Barra Superior (Cabeçalho)'],
-                      ['minimalNavbar', 'Cabeçalho Minimalista (só Logo + Sem Barra)'],
-                      ['showFramelessButton', 'Botão "Sem Barra" no Cabeçalho'],
-                      ['showInstallFramelessInStart', 'Botão "Instalar App / Modo Sem Barra" no Início'],
-                      ['showStartStageMetadata', 'Exibir Fase e Alvos na Tela Inicial'],
-                      ['showStartPestLegend', 'Exibir Miniaturas das Pragas na Tela Inicial'],
-                      ['showHudStageInfo', 'Exibir Info da Fase no Topo da Arena'],
-                      ['showHudMetrics', 'Exibir Reação, Combo, Precisão e Pontos'],
-                      ['showHudSoundButton', 'Exibir Botão de Áudio no Topo da Arena'],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="flex items-center justify-between gap-3 p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700"
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: {
+                            ...prev.uiCustomization,
+                            minimalNavbar: true,
+                            showNavbarTabs: false,
+                            showNavbarRegistrationButton: false,
+                            showNavbarStars: false,
+                            showNavbarSoundButton: false,
+                            showFramelessButton: false,
+                            showNavbarAdminBadge: false,
+                            showNavbarPlayerBadge: false,
+                            showInstallFramelessInStart: false,
+                            showHudSoundButton: false,
+                            showHudAdminControls: false,
+                            showBottomAdminBar: false,
+                          },
+                        }));
+                        showToast('Controles extras ocultados! Clique em "Salvar na Nuvem" para aplicar.');
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 transition"
                     >
-                      <span className="text-slate-200">{label}</span>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(settingsDraft.uiCustomization?.[key])}
-                        onChange={(e) =>
-                          setSettingsDraft((prev) => ({
-                            ...prev,
-                            uiCustomization: {
-                              ...prev.uiCustomization,
-                              [key]: e.target.checked,
-                            },
-                          }))
-                        }
-                        className="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0"
-                      />
-                    </label>
-                  ))}
+                      Ocultar Todos Extras (Tela Limpa)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsDraft((prev) => ({
+                          ...prev,
+                          uiCustomization: {
+                            ...prev.uiCustomization,
+                            showNavbarTabs: true,
+                            showNavbarRegistrationButton: true,
+                            showNavbarAdminBadge: true,
+                            showHudAdminControls: true,
+                            showBottomAdminBar: true,
+                          },
+                        }));
+                        showToast('Controles de Administrador ativados para visualização.');
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition"
+                    >
+                      Exibir Controles Admin
+                    </button>
+                  </div>
+                </div>
+
+                {/* Subgrupo 1: Barra Superior (Cabeçalho) */}
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 font-mono-code">
+                    Barra Superior (Cabeçalho)
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    {(
+                      [
+                        ['showNavbar', 'Exibir Barra Superior (Logotipo / Cabeçalho)'],
+                        ['showNavbarTabs', 'Abas de Navegação (Jogar, Fases, Ranking, Prêmios)'],
+                        ['showNavbarRegistrationButton', 'Botão "Inscrição" no Cabeçalho'],
+                        ['showNavbarStars', 'Contador de Estrelas (★) no Cabeçalho'],
+                        ['showNavbarSoundButton', 'Botão de Áudio no Cabeçalho'],
+                        ['showFramelessButton', 'Botão "Sem Barra" no Cabeçalho'],
+                        ['showNavbarAdminBadge', 'Botão Verde "ADMIN" no Cabeçalho'],
+                        ['showNavbarPlayerBadge', 'Crachá do Jogador (Nome / Bandeira) no Cabeçalho'],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="flex items-center justify-between gap-3 p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700"
+                      >
+                        <span className="text-slate-200">{label}</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(settingsDraft.uiCustomization?.[key])}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              uiCustomization: {
+                                ...prev.uiCustomization,
+                                [key]: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subgrupo 2: Arena, Tela Inicial & Barra Inferior */}
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300 font-mono-code">
+                    Arena, Tela Inicial &amp; Barra Inferior
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    {(
+                      [
+                        ['showHudStageInfo', 'Info da Fase no Topo da Arena'],
+                        ['showHudMetrics', 'Métricas (Reação, Combo, Precisão e Pontos)'],
+                        ['showHudSoundButton', 'Botão de Áudio no Topo da Arena'],
+                        ['showHudAdminControls', 'Botões "PAINEL" e "Reiniciar" no Topo da Arena'],
+                        ['showBottomAdminBar', 'Barra Inferior de Fases &amp; Atalhos Admin'],
+                        ['showStartStageMetadata', 'Fase e Alvos na Tela Inicial'],
+                        ['showStartPestLegend', 'Miniaturas das Pragas na Tela Inicial'],
+                        ['showInstallFramelessInStart', 'Botão "Instalar App / Modo Sem Barra" no Início'],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="flex items-center justify-between gap-3 p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700"
+                      >
+                        <span className="text-slate-200">{label}</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(settingsDraft.uiCustomization?.[key])}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              uiCustomization: {
+                                ...prev.uiCustomization,
+                                [key]: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0"
+                        />
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

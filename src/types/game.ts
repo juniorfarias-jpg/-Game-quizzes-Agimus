@@ -125,7 +125,13 @@ export interface AppCustomizationConfig {
   watermarkOpacity: number; // 0.02 to 0.35
   showNavbar: boolean;
   minimalNavbar: boolean;
+  showNavbarTabs?: boolean;
+  showNavbarRegistrationButton?: boolean;
+  showNavbarStars?: boolean;
+  showNavbarSoundButton?: boolean;
   showFramelessButton: boolean;
+  showNavbarAdminBadge?: boolean;
+  showNavbarPlayerBadge?: boolean;
   startHeadline: string;
   startSubtitle: string;
   startButtonText: string;
@@ -136,6 +142,8 @@ export interface AppCustomizationConfig {
   showHudStageInfo: boolean;
   showHudMetrics: boolean;
   showHudSoundButton: boolean;
+  showHudAdminControls?: boolean;
+  showBottomAdminBar?: boolean;
 }
 
 export interface MobileOptimizationConfig {
