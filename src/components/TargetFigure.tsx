@@ -8,7 +8,7 @@ interface TargetFigureProps {
   customImage?: CustomTargetImageConfig;
   showPestLabels?: boolean;
   showHitbox?: boolean;
-  onClick: (figure: TargetFigureData, e: React.MouseEvent) => void;
+  onClick: (figure: TargetFigureData, e: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export const TargetFigure: React.FC<TargetFigureProps> = ({ 
@@ -237,8 +237,11 @@ export const TargetFigure: React.FC<TargetFigureProps> = ({
 
   return (
     <div
-      onClick={(e) => onClick(figure, e)}
-      className="absolute cursor-pointer transition-transform duration-75 active:scale-90 select-none group"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onClick(figure, e);
+      }}
+      className="absolute cursor-pointer transition-transform duration-75 active:scale-90 select-none touch-none group"
       style={{
         left: `${figure.x}%`,
         top: `${figure.y}%`,

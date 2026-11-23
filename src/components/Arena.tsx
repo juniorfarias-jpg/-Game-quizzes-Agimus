@@ -10,7 +10,8 @@ import {
   DevControlOverrides,
   ArenaSceneConfig,
   PestKind,
-  AppCustomizationConfig
+  AppCustomizationConfig,
+  MobileOptimizationConfig
 } from '../types/game';
 import { sound } from '../utils/sound';
 import { TargetFigure } from './TargetFigure';
@@ -18,7 +19,7 @@ import { CustomCrosshair } from './CustomCrosshair';
 import { PestSprite, PEST_META } from './PestSprite';
 import { WalkingCats } from './WalkingCats';
 import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
-import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2, Maximize2 } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2, Maximize2, Smartphone, X } from 'lucide-react';
 
 interface ArenaProps {
   level: LevelConfig;
@@ -27,6 +28,7 @@ interface ArenaProps {
   customImage?: CustomTargetImageConfig;
   sceneConfig?: ArenaSceneConfig;
   uiCustomization?: AppCustomizationConfig;
+  mobileConfig?: MobileOptimizationConfig;
   onInstallOrFrameless?: () => void;
   devOverrides?: DevControlOverrides;
   soundEnabled: boolean;
@@ -97,6 +99,7 @@ export const Arena: React.FC<ArenaProps> = ({
   customImage,
   sceneConfig,
   uiCustomization,
+  mobileConfig,
   onInstallOrFrameless,
   devOverrides,
   soundEnabled,
@@ -130,10 +133,36 @@ export const Arena: React.FC<ArenaProps> = ({
   const [hitRecords, setHitRecords] = useState<HitRecord[]>([]);
   const [lastReactionMs, setLastReactionMs] = useState<number | null>(null);
 
-  // Mouse coords for crosshair
+  // Mouse/Touch coords & device capabilities
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
   const [isHoveringArena, setIsHoveringArena] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  const [isPortrait, setIsPortrait] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
+  );
+  const [isTouchInput, setIsTouchInput] = useState<boolean>(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(pointer: coarse)').matches
+      : false
+  );
+  const [dismissOrientationTip, setDismissOrientationTip] = useState<boolean>(false);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
+  }, []);
 
   // Refs for tracking mutable loops
   const particlesRef = useRef<Particle[]>([]);
@@ -319,18 +348,25 @@ export const Arena: React.FC<ArenaProps> = ({
       const vx = isMoving ? (Math.random() - 0.5) * 0.4 : 0;
       const vy = isMoving ? (Math.random() - 0.5) * 0.4 : 0;
 
+      const isMobileBoostActive = isMobileViewport && mobileConfig?.enabled !== false;
       const baseDur = devOverrides?.targetDurationOverrideMs != null
         ? devOverrides.targetDurationOverrideMs
         : level.baseDurationMs;
-      const durationMs = isGolden ? Math.round(baseDur * 0.85) : baseDur;
+      const extraMobileMs = isMobileBoostActive ? (mobileConfig?.extraReactionTimeMs ?? 150) : 0;
+      const durationMs = (isGolden ? Math.round(baseDur * 0.85) : baseDur) + extraMobileMs;
+
       const rawSize = devOverrides?.targetSizeOverridePx != null
         ? devOverrides.targetSizeOverridePx
         : level.targetSize;
-      const targetSize = pestKind ? Math.max(rawSize, 62) : rawSize;
+      const baseTargetSize = pestKind ? Math.max(rawSize, 62) : rawSize;
+      const mobileScale = isMobileBoostActive ? (mobileConfig?.targetSizeMultiplier ?? 1.25) : 1;
+      const targetSize = isMobileBoostActive
+        ? Math.min(124, Math.max(52, Math.round(baseTargetSize * mobileScale)))
+        : baseTargetSize;
 
       // Position selection: in living room mode spawn preferentially on sofa, armchairs, cat & rug
-      let x = 12 + Math.random() * 76;
-      let y = 14 + Math.random() * 72;
+      let x = isMobileViewport ? 14 + Math.random() * 72 : 12 + Math.random() * 76;
+      let y = isMobileViewport ? 16 + Math.random() * 68 : 14 + Math.random() * 72;
 
       if (isLivingRoomMode) {
         const totalWeight = LIVING_ROOM_HOTSPOTS.reduce((acc, h) => acc + h.weight, 0);
@@ -345,6 +381,11 @@ export const Arena: React.FC<ArenaProps> = ({
         }
         x = chosen.xMin + Math.random() * (chosen.xMax - chosen.xMin);
         y = chosen.yMin + Math.random() * (chosen.yMax - chosen.yMin);
+      }
+
+      if (isMobileViewport) {
+        x = Math.min(88, Math.max(12, x));
+        y = Math.min(84, Math.max(14, y));
       }
 
       const newFigure: TargetFigureData = {
@@ -387,7 +428,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       return prev + 1;
     });
-  }, [gameState, level, isLivingRoomMode, sceneConfig, devOverrides]);
+  }, [gameState, level, isLivingRoomMode, sceneConfig, devOverrides, isMobileViewport, mobileConfig]);
 
   // Schedule next spawns while playing
   useEffect(() => {
@@ -502,10 +543,30 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   }, [gameState, hitRecords, misses, score, hits, trapsHit, level.id, isLivingRoomMode, tryExitFullscreen]);
 
-  // Target figure clicked
-  const handleFigureClick = (figure: TargetFigureData, e: React.MouseEvent) => {
+  // Target figure tapped/clicked (supports zero-latency PointerEvent on mobile)
+  const triggerHaptic = (pattern: number | number[]) => {
+    if (mobileConfig?.enabled === false || mobileConfig?.hapticFeedback === false) return;
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(pattern);
+      }
+    } catch {}
+  };
+
+  const handleFigureClick = (
+    figure: TargetFigureData,
+    e: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>
+  ) => {
     e.stopPropagation();
     if (gameState !== 'playing') return;
+
+    if ('pointerType' in e) {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        setIsTouchInput(true);
+      } else if (e.pointerType === 'mouse') {
+        setIsTouchInput(false);
+      }
+    }
 
     const rect = arenaRef.current?.getBoundingClientRect();
     const clickX = rect ? e.clientX - rect.left : 100;
@@ -517,6 +578,7 @@ export const Arena: React.FC<ArenaProps> = ({
     if (figure.isTrap) {
       // Hit a prohibited trap bomb!
       sound.playTrap();
+      triggerHaptic(75);
       setScreenShake(true);
       setTimeout(() => setScreenShake(false), 350);
       setCombo(0);
@@ -581,8 +643,11 @@ export const Arena: React.FC<ArenaProps> = ({
 
     if (figure.isGolden) {
       sound.playGoldenHit();
+      triggerHaptic([20, 25, 20]);
       ratingText = `3X OURO! (${reactionTimeMs}ms)`;
       ratingColor = '#fbbf24';
+    } else {
+      triggerHaptic(14);
     }
 
     // Multiplier based on combo streak
@@ -625,15 +690,22 @@ export const Arena: React.FC<ArenaProps> = ({
     ]);
   };
 
-  // Empty arena clicked (Miss)
-  const handleArenaMiss = (e: React.MouseEvent) => {
+  // Empty arena tapped/clicked (Miss)
+  const handleArenaMiss = (e: React.PointerEvent<HTMLDivElement>) => {
     if (gameState !== 'playing') return;
+
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      setIsTouchInput(true);
+    } else if (e.pointerType === 'mouse') {
+      setIsTouchInput(false);
+    }
 
     const rect = arenaRef.current?.getBoundingClientRect();
     const clickX = rect ? e.clientX - rect.left : 100;
     const clickY = rect ? e.clientY - rect.top : 100;
 
     sound.playMiss();
+    triggerHaptic(35);
     setCombo(0);
     setMisses((m) => m + 1);
     const penalty = 80;
@@ -643,9 +715,12 @@ export const Arena: React.FC<ArenaProps> = ({
     spawnParticles(clickX, clickY, '#64748b', 8);
   };
 
-  // Mouse move handler for reticle
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
+  // Mouse move handler for reticle (desktop mouse only)
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') {
+      setIsTouchInput(false);
+      setMousePos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   // Sync canvas size (including fullscreen / full-viewport transitions)
@@ -678,41 +753,66 @@ export const Arena: React.FC<ArenaProps> = ({
     : 0;
 
   const isFullScreenPlay = gameState === 'countdown' || gameState === 'playing';
+  const showCrosshair =
+    isHoveringArena &&
+    gameState === 'playing' &&
+    !(isTouchInput && (mobileConfig?.hideCrosshairOnTouch ?? true));
+  const compactMobileHud = isMobileViewport && (mobileConfig?.compactHudOnMobile ?? true);
+  const arenaHeightClass = isFullScreenPlay
+    ? 'flex-1 min-h-0'
+    : mobileConfig?.arenaHeightMode === 'compact'
+    ? 'h-[400px] sm:h-[520px]'
+    : mobileConfig?.arenaHeightMode === 'tall'
+    ? 'h-[540px] sm:h-[560px]'
+    : 'min-h-[430px] h-[calc(100dvh-11rem)] sm:h-[540px] max-h-[680px]';
+
+  const orientationMismatch =
+    isMobileViewport &&
+    !dismissOrientationTip &&
+    mobileConfig?.enabled !== false &&
+    ((mobileConfig?.recommendedOrientation === 'landscape' && isPortrait) ||
+      (mobileConfig?.recommendedOrientation === 'portrait' && !isPortrait));
 
   return (
     <div 
       ref={arenaRootRef}
       className={
         isFullScreenPlay
-          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#070b14] flex flex-col p-2 sm:p-4 overflow-hidden'
+          ? 'fixed inset-0 z-50 w-screen h-[100dvh] bg-[#070b14] flex flex-col p-1.5 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden'
           : 'relative flex flex-col items-center w-full max-w-5xl mx-auto'
       }
-      onMouseMove={handleMouseMove}
+      onPointerMove={handlePointerMove}
     >
       <CustomCrosshair
         x={mousePos.x}
         y={mousePos.y}
         type={crosshair}
-        visible={isHoveringArena && gameState === 'playing'}
+        visible={showCrosshair}
       />
 
       {/* Top HUD Bar */}
       <div
-        className={`w-full flex flex-wrap items-center justify-between gap-3 px-4 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-xl shadow-lg ${
-          isFullScreenPlay ? 'py-2 mb-2 shrink-0' : 'py-3 mb-3'
+        className={`w-full flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-4 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-xl shadow-lg ${
+          isFullScreenPlay
+            ? compactMobileHud
+              ? 'py-1.5 sm:py-2 mb-1.5 sm:mb-2 shrink-0'
+              : 'py-2 mb-2 shrink-0'
+            : compactMobileHud
+            ? 'py-2 sm:py-3 mb-2 sm:mb-3'
+            : 'py-3 mb-3'
         }`}
       >
         {/* Stage & Progress info */}
         {uiCustomization?.showHudStageInfo !== false ? (
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center font-display font-bold text-indigo-400">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center font-display font-bold text-xs sm:text-base text-indigo-400 shrink-0">
               {level.id}
             </div>
-            <div>
-              <div className="text-xs font-semibold tracking-wider text-indigo-400 uppercase font-display">
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-indigo-400 uppercase font-display truncate max-w-[115px] sm:max-w-none">
                 {level.name}
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-[11px] sm:text-xs text-slate-400">
                 Alvos: <span className="text-white font-mono-code font-bold">{spawnedCount}/{level.targetCount}</span>
               </div>
             </div>
@@ -723,52 +823,52 @@ export const Arena: React.FC<ArenaProps> = ({
 
         {/* Real-time Reflex Metrics */}
         {uiCustomization?.showHudMetrics !== false && (
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2.5 sm:gap-6">
             {/* Reaction Speed Indicator */}
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-cyan-400" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Reação</div>
-                <div className="font-mono-code text-sm font-bold text-white flex items-center gap-1.5">
+                <div className="hidden sm:block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Reação</div>
+                <div className="font-mono-code text-xs sm:text-sm font-bold text-white flex items-center gap-1">
                   <span className={lastReactionMs && lastReactionMs < 250 ? 'text-cyan-400' : 'text-slate-200'}>
                     {lastReactionMs ? `${lastReactionMs}ms` : '--'}
                   </span>
                   {currentAvgMs > 0 && (
-                    <>
-                      <span className="text-slate-500">/</span>
-                      <span className="text-emerald-400">{currentAvgMs}ms</span>
-                    </>
+                    <span className="hidden sm:inline text-emerald-400">
+                      <span className="text-slate-500 mr-1">/</span>
+                      {currentAvgMs}ms
+                    </span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Combo Multiplier */}
-            <div className="flex items-center gap-2">
-              <Flame className={`w-4 h-4 ${combo > 3 ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Flame className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${combo > 3 ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
               <div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Combo</div>
-                <div className="font-mono-code text-sm font-bold text-amber-400">
+                <div className="hidden sm:block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Combo</div>
+                <div className="font-mono-code text-xs sm:text-sm font-bold text-amber-400">
                   {combo}x
                 </div>
               </div>
             </div>
 
             {/* Accuracy */}
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-emerald-400" />
+            <div className="hidden xs:flex sm:flex items-center gap-1 sm:gap-2">
+              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Precisão</div>
-                <div className="font-mono-code text-sm font-bold text-emerald-400">
+                <div className="hidden sm:block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Precisão</div>
+                <div className="font-mono-code text-xs sm:text-sm font-bold text-emerald-400">
                   {currentAccuracy}%
                 </div>
               </div>
             </div>
 
             {/* Score */}
-            <div className="px-3 py-1 bg-slate-950/70 border border-slate-700/60 rounded-lg">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pontos</div>
-              <div className="font-display text-base font-bold text-white tracking-wide">
+            <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-slate-950/70 border border-slate-700/60 rounded-lg">
+              <div className="hidden sm:block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pontos</div>
+              <div className="font-display text-xs sm:text-base font-bold text-white tracking-wide tabular-nums">
                 {score.toLocaleString()}
               </div>
             </div>
@@ -776,22 +876,22 @@ export const Arena: React.FC<ArenaProps> = ({
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {isAdminLoggedIn && onOpenControlPanel && (
             <button
               onClick={onOpenControlPanel}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 rounded-lg transition-colors border border-cyan-500/30 shadow-sm"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[36px] text-slate-300 hover:text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 rounded-lg transition-colors border border-cyan-500/30 shadow-sm"
               title="Painel de Controle Oculto (ALT + C)"
             >
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[10px] font-mono-code font-bold tracking-wider">PAINEL</span>
+              <span className="hidden sm:inline text-[10px] font-mono-code font-bold tracking-wider">PAINEL</span>
             </button>
           )}
 
           {uiCustomization?.showHudSoundButton !== false && (
             <button
               onClick={onToggleSound}
-              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
               title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
@@ -803,7 +903,7 @@ export const Arena: React.FC<ArenaProps> = ({
                 tryExitFullscreen();
                 onRestart();
               }}
-              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
               title="Sair da Tela Cheia (Admin)"
             >
               <Minimize2 className="w-4 h-4" />
@@ -812,7 +912,7 @@ export const Arena: React.FC<ArenaProps> = ({
           {isAdminLoggedIn && (
             <button
               onClick={onRestart}
-              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
               title="Reiniciar Fase (Admin)"
             >
               <RotateCcw className="w-4 h-4" />
@@ -824,11 +924,11 @@ export const Arena: React.FC<ArenaProps> = ({
       {/* Main Interactive Arena Area */}
       <div
         ref={arenaRef}
-        onClick={handleArenaMiss}
+        onPointerDown={handleArenaMiss}
         onMouseEnter={() => setIsHoveringArena(true)}
         onMouseLeave={() => setIsHoveringArena(false)}
-        className={`relative w-full ${
-          isFullScreenPlay ? 'flex-1 min-h-0' : 'h-[520px]'
+        className={`relative w-full ${arenaHeightClass} ${
+          gameState === 'playing' ? 'touch-none' : ''
         } bg-gradient-to-b from-[#0a0f1d] via-[#070b14] to-[#04070e] border-2 rounded-2xl overflow-hidden select-none cursor-crosshair shadow-2xl transition-transform ${
           screenShake ? 'scale-[0.98] border-red-500 translate-x-1 translate-y-1' : 'border-indigo-500/20'
         }`}
@@ -879,13 +979,13 @@ export const Arena: React.FC<ArenaProps> = ({
             style={{ left: `${f.x}px`, top: `${f.y}px` }}
           >
             <span
-              className="text-base sm:text-lg font-display font-bold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] bg-slate-950/75 px-2 py-0.5 rounded-lg"
+              className="text-sm sm:text-lg font-display font-bold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] bg-slate-950/75 px-2 py-0.5 rounded-lg whitespace-nowrap"
               style={{ color: f.color }}
             >
               {f.text}
             </span>
             {f.subText && (
-              <span className="text-[11px] font-mono-code font-semibold text-white/95 bg-black/80 px-1.5 py-0.5 rounded shadow mt-0.5">
+              <span className="text-[10px] sm:text-[11px] font-mono-code font-semibold text-white/95 bg-black/80 px-1.5 py-0.5 rounded shadow mt-0.5 whitespace-nowrap">
                 {f.subText}
               </span>
             )}
@@ -908,7 +1008,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
         {/* Custom Target Image Active Badge Indicator */}
         {customImage?.enabled && customImage.imageUrl && (
-          <div className="absolute top-3 right-4 flex items-center gap-1.5 text-[10px] text-cyan-300 font-mono-code bg-cyan-950/80 border border-cyan-700/60 px-2 py-0.5 rounded shadow z-30">
+          <div className="absolute top-3 right-3 sm:right-4 flex items-center gap-1.5 text-[10px] text-cyan-300 font-mono-code bg-cyan-950/80 border border-cyan-700/60 px-2 py-0.5 rounded shadow z-30">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
             <span>Alvo Personalizado Ativo</span>
           </div>
@@ -918,19 +1018,43 @@ export const Arena: React.FC<ArenaProps> = ({
         {gameState === 'ready' && (
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-[3px] z-50 p-6 text-center select-none"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-[3px] z-50 p-4 sm:p-6 text-center select-none overflow-y-auto"
           >
             {/* Ambient glows */}
             <div 
-              className="absolute w-72 h-72 rounded-full blur-3xl opacity-20 pointer-events-none"
+              className="absolute w-64 h-64 sm:w-72 sm:h-72 rounded-full blur-3xl opacity-20 pointer-events-none"
               style={{ backgroundColor: primaryColor }}
             />
 
-            <div className="relative z-10 flex flex-col items-center max-w-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative z-10 flex flex-col items-center max-w-xl w-full space-y-3 sm:space-y-4 my-auto animate-in fade-in zoom-in-95 duration-200">
+              {/* Optional Mobile Orientation Hint */}
+              {orientationMismatch && (
+                <div className="w-full max-w-md px-3 py-2 rounded-xl bg-amber-950/80 border border-amber-500/40 text-amber-200 text-[11px] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-left">
+                    <Smartphone className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>
+                      Para melhor visualização, gire o aparelho para{' '}
+                      <strong>
+                        {mobileConfig?.recommendedOrientation === 'landscape' ? 'Horizontal (Paisagem)' : 'Vertical (Retrato)'}
+                      </strong>.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDismissOrientationTip(true)}
+                    className="p-1 text-amber-300 hover:text-white shrink-0"
+                    aria-label="Fechar aviso"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Stage Subtitle */}
               {uiCustomization?.showStartStageMetadata !== false && (
                 <div 
-                  className="text-xs font-mono-code font-bold uppercase tracking-widest"
+                  className="text-[11px] sm:text-xs font-mono-code font-bold uppercase tracking-widest"
                   style={{ color: primaryColor }}
                 >
                   Fase {level.id} · {level.name}
@@ -939,27 +1063,27 @@ export const Arena: React.FC<ArenaProps> = ({
 
               {/* Headline */}
               <div>
-                <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md text-balance">
+                <h1 className="text-2xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md text-balance">
                   {uiCustomization?.startHeadline?.trim() ||
                     (isLivingRoomMode ? 'ELIMINE AS PRAGAS DA SALA' : 'ARENA DE REFLEXOS')}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-lg drop-shadow mx-auto">
                   {uiCustomization?.startSubtitle?.trim() ||
                     (isLivingRoomMode
-                      ? 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!'
+                      ? 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Toque rápido para eliminar!'
                       : 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!')}
                 </p>
               </div>
 
               {/* Pest Legend in Living Room Mode */}
               {isLivingRoomMode && uiCustomization?.showStartPestLegend !== false && (
-                <div className="grid grid-cols-4 gap-2 sm:gap-3 w-full max-w-md pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full max-w-md pt-1">
                   {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
                     <div
                       key={kind}
-                      className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900/85 border border-slate-700/80 shadow"
+                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-slate-900/85 border border-slate-700/80 shadow"
                     >
-                      <div className="w-10 h-10">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10">
                         <PestSprite pestKind={kind} showLabel={false} />
                       </div>
                       <span className="text-[11px] font-semibold text-white whitespace-nowrap">
@@ -972,7 +1096,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
               {/* Stage Parameters Clean Metadata */}
               {uiCustomization?.showStartStageMetadata !== false && (
-                <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono-code text-slate-300">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono-code text-slate-300">
                   <span>{level.targetCount} Alvos</span>
                   <span aria-hidden="true">·</span>
                   <span>Tolerância: {level.baseDurationMs}ms</span>
@@ -989,13 +1113,13 @@ export const Arena: React.FC<ArenaProps> = ({
               <button
                 type="button"
                 onClick={handleStartGame}
-                className="mt-1 px-10 py-4 rounded-2xl font-display font-black text-lg sm:text-xl uppercase tracking-wider text-slate-950 flex items-center gap-3.5 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                className="mt-1 px-8 sm:px-10 py-3.5 sm:py-4 min-h-[48px] rounded-2xl font-display font-black text-base sm:text-xl uppercase tracking-wider text-slate-950 flex items-center gap-3 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                 style={{
                   backgroundColor: primaryColor,
                   boxShadow: `0 0 35px ${primaryColor}77`,
                 }}
               >
-                <Play className="w-6 h-6 fill-slate-950" />
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-slate-950" />
                 <span>{uiCustomization?.startButtonText?.trim() || 'Começar Jogo'}</span>
               </button>
 
@@ -1009,7 +1133,7 @@ export const Arena: React.FC<ArenaProps> = ({
                 <button
                   type="button"
                   onClick={onInstallOrFrameless}
-                  className="mt-1 px-4 py-2 rounded-xl text-xs font-mono-code border border-slate-700/80 bg-slate-900/75 hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
+                  className="mt-1 px-4 py-2 min-h-[40px] rounded-xl text-xs font-mono-code border border-slate-700/80 bg-slate-900/75 hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
                   style={{ color: primaryColor, borderColor: `${primaryColor}44` }}
                 >
                   <Maximize2 className="w-3.5 h-3.5" />

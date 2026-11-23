@@ -51,7 +51,9 @@ import {
   Grid3X3,
   CircleDot,
   Square,
-  Zap
+  Zap,
+  Smartphone,
+  Tablet
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -83,9 +85,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onDeleteRegistration,
   onClearRegistrations,
 }) => {
-  const [activeTab, setActiveTab] = useState<'branding' | 'layout' | 'registration' | 'levels' | 'image' | 'endgame' | 'leaderboard' | 'security'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'layout' | 'mobile' | 'registration' | 'levels' | 'image' | 'endgame' | 'leaderboard' | 'security'>('branding');
   const [settingsDraft, setSettingsDraft] = useState<AppAdminSettings>(adminSettings);
   const [notification, setNotification] = useState<string | null>(null);
+  const [mobilePreviewOrientation, setMobilePreviewOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   // Sync draft whenever adminSettings changes (e.g. from cloud)
   useEffect(() => {
@@ -498,9 +501,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 bg-slate-950/90 backdrop-blur-md">
       <div 
-        className="relative w-full max-w-5xl bg-[#090e1a] border-2 rounded-2xl shadow-[0_0_50px_rgba(0,210,255,0.25)] flex flex-col max-h-[92vh] overflow-hidden"
+        className="relative w-full max-w-5xl bg-[#090e1a] border-0 sm:border-2 rounded-none sm:rounded-2xl shadow-[0_0_50px_rgba(0,210,255,0.25)] flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] overflow-hidden"
         style={{ borderColor: `${settingsDraft.branding.primaryColor}88` }}
       >
         {/* Top Header */}
@@ -589,6 +592,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           >
             <LayoutTemplate className="w-4 h-4" />
             <span>Textos & Layout Total</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('mobile')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'mobile'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>Dispositivos Móveis</span>
           </button>
 
           <button
@@ -1617,6 +1632,392 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       />
                     </label>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: DISPOSITIVOS MÓVEIS (CELULARES & TABLETS) */}
+          {activeTab === 'mobile' && (
+            <div className="space-y-6">
+              {/* Master Mobile Optimization Toggle */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-cyan-400" />
+                    <span>Configuração para Celulares e Tablets</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Ajuste o tamanho dos alvos para toque com o dedo, tolerância extra, HUD compacto, vibração tátil e atalho secreto do Admin sem teclado.
+                  </p>
+                </div>
+
+                <label className="flex items-center gap-2.5 cursor-pointer px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl">
+                  <span className="text-xs font-bold text-white">
+                    {settingsDraft.mobileConfig?.enabled !== false ? 'Ativo' : 'Desativado'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settingsDraft.mobileConfig?.enabled !== false}
+                    onChange={(e) =>
+                      setSettingsDraft((prev) => ({
+                        ...prev,
+                        mobileConfig: {
+                          ...prev.mobileConfig,
+                          enabled: e.target.checked,
+                        },
+                      }))
+                    }
+                    className="w-5 h-5 accent-cyan-400 cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              {/* 1-Click Mobile Presets */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsDraft((prev) => ({
+                      ...prev,
+                      mobileConfig: {
+                        ...prev.mobileConfig,
+                        enabled: true,
+                        targetSizeMultiplier: 1.25,
+                        extraReactionTimeMs: 150,
+                        arenaHeightMode: 'auto',
+                        compactHudOnMobile: true,
+                        hideCrosshairOnTouch: true,
+                        hapticFeedback: true,
+                        mobileTouchGestureAdmin: true,
+                        recommendedOrientation: 'any',
+                      },
+                    }));
+                    setMobilePreviewOrientation('portrait');
+                    showToast('Predefinição Smartphone Retrato aplicada!');
+                  }}
+                  className="p-3.5 rounded-xl border border-cyan-500/40 bg-cyan-950/25 hover:bg-cyan-950/45 text-left transition flex items-start gap-3"
+                >
+                  <Smartphone className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-bold text-cyan-300">
+                      Perfil Smartphone (Retrato / 1 Mão)
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Alvos +25% maiores, +150ms no toque, HUD compacto, vibração e altura adaptativa.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsDraft((prev) => ({
+                      ...prev,
+                      mobileConfig: {
+                        ...prev.mobileConfig,
+                        enabled: true,
+                        targetSizeMultiplier: 1.15,
+                        extraReactionTimeMs: 100,
+                        arenaHeightMode: 'auto',
+                        compactHudOnMobile: true,
+                        hideCrosshairOnTouch: true,
+                        hapticFeedback: true,
+                        mobileTouchGestureAdmin: true,
+                        recommendedOrientation: 'landscape',
+                      },
+                    }));
+                    setMobilePreviewOrientation('landscape');
+                    showToast('Predefinição Tablet / Paisagem aplicada!');
+                  }}
+                  className="p-3.5 rounded-xl border border-indigo-500/40 bg-indigo-950/25 hover:bg-indigo-950/45 text-left transition flex items-start gap-3"
+                >
+                  <Tablet className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-bold text-indigo-300">
+                      Perfil Tablet / Paisagem (Recomendado p/ Sala)
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Alvos +15%, +100ms e aviso amigável para girar o celular na horizontal.
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* Left Column: Sliders & Toggles */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Touch Target Size & Timing */}
+                  <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Precisão de Toque &amp; Velocidade no Celular
+                    </h4>
+
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-slate-300 font-semibold">
+                          Escala dos Alvos no Toque:
+                        </span>
+                        <span className="font-mono-code font-bold text-cyan-400">
+                          {Math.round((settingsDraft.mobileConfig?.targetSizeMultiplier ?? 1.25) * 100)}% (
+                          {(settingsDraft.mobileConfig?.targetSizeMultiplier ?? 1.25).toFixed(2)}x)
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={1.6}
+                        step={0.05}
+                        value={settingsDraft.mobileConfig?.targetSizeMultiplier ?? 1.25}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            mobileConfig: {
+                              ...prev.mobileConfig,
+                              targetSizeMultiplier: Number(e.target.value),
+                            },
+                          }))
+                        }
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono-code">
+                        <span>1.0x (Original)</span>
+                        <span>1.25x (Recomendado)</span>
+                        <span>1.6x (Extra Grande)</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-slate-300 font-semibold">
+                          Tolerância Extra de Tempo no Celular:
+                        </span>
+                        <span className="font-mono-code font-bold text-emerald-400">
+                          +{settingsDraft.mobileConfig?.extraReactionTimeMs ?? 150}ms
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={500}
+                        step={50}
+                        value={settingsDraft.mobileConfig?.extraReactionTimeMs ?? 150}
+                        onChange={(e) =>
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            mobileConfig: {
+                              ...prev.mobileConfig,
+                              extraReactionTimeMs: Number(e.target.value),
+                            },
+                          }))
+                        }
+                        className="w-full accent-emerald-400 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono-code">
+                        <span>0ms (Igual Desktop)</span>
+                        <span>+150ms</span>
+                        <span>+500ms</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Layout & Orientation */}
+                  <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      Tela &amp; Orientação no Dispositivo Móvel
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                          Altura da Arena (Tela Inicial):
+                        </label>
+                        <select
+                          value={settingsDraft.mobileConfig?.arenaHeightMode || 'auto'}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              mobileConfig: {
+                                ...prev.mobileConfig,
+                                arenaHeightMode: e.target.value as 'auto' | 'compact' | 'tall',
+                              },
+                            }))
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
+                        >
+                          <option value="auto">Automática (Preenche a Tela)</option>
+                          <option value="compact">Compacta (400px)</option>
+                          <option value="tall">Alta (540px)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                          Orientação Recomendada:
+                        </label>
+                        <select
+                          value={settingsDraft.mobileConfig?.recommendedOrientation || 'any'}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              mobileConfig: {
+                                ...prev.mobileConfig,
+                                recommendedOrientation: e.target.value as 'any' | 'portrait' | 'landscape',
+                              },
+                            }))
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
+                        >
+                          <option value="any">Qualquer (Retrato ou Paisagem)</option>
+                          <option value="portrait">Vertical (Retrato)</option>
+                          <option value="landscape">Horizontal (Paisagem)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
+                      {(
+                        [
+                          ['compactHudOnMobile', 'HUD Compacto durante o jogo'],
+                          ['hideCrosshairOnTouch', 'Ocultar mira ao tocar na tela'],
+                          ['hapticFeedback', 'Vibração tátil nos acertos'],
+                          ['mobileTouchGestureAdmin', 'Abrir Admin ao segurar/tocar 5x logo'],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label
+                          key={key}
+                          className="flex items-center justify-between gap-2 p-2.5 bg-slate-900/70 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700"
+                        >
+                          <span className="text-slate-200 text-[11px]">{label}</span>
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.mobileConfig?.[key] !== false}
+                            onChange={(e) =>
+                              setSettingsDraft((prev) => ({
+                                ...prev,
+                                mobileConfig: {
+                                  ...prev.mobileConfig,
+                                  [key]: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Live Mobile Device Preview */}
+                <div className="lg:col-span-5 p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col items-center justify-between gap-3">
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-white font-display uppercase tracking-wider">
+                      Prévia Mobile
+                    </span>
+                    <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setMobilePreviewOrientation('portrait')}
+                        className={`px-2 py-1 text-[10px] font-semibold rounded transition ${
+                          mobilePreviewOrientation === 'portrait'
+                            ? 'bg-cyan-500 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Retrato
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMobilePreviewOrientation('landscape')}
+                        className={`px-2 py-1 text-[10px] font-semibold rounded transition ${
+                          mobilePreviewOrientation === 'landscape'
+                            ? 'bg-cyan-500 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Paisagem
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Phone Mockup */}
+                  <div
+                    className={`border-[3px] border-slate-700 rounded-[24px] overflow-hidden shadow-2xl flex flex-col transition-all ${
+                      mobilePreviewOrientation === 'portrait' ? 'w-[220px] h-[390px]' : 'w-full max-w-[330px] h-[205px]'
+                    }`}
+                    style={{ backgroundColor: settingsDraft.branding.backgroundColor || '#070c18' }}
+                  >
+                    {/* Simulated Mobile Header */}
+                    <div
+                      className="px-3 py-2 border-b border-slate-800/80 flex items-center justify-between shrink-0"
+                      style={{
+                        backgroundColor: settingsDraft.branding.headerBgColor || '#060a14',
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {settingsDraft.logo.enabled && settingsDraft.logo.logoUrl ? (
+                          <img
+                            src={settingsDraft.logo.logoUrl}
+                            alt="Logo"
+                            className="h-4 max-w-[70px] object-contain"
+                          />
+                        ) : (
+                          <div
+                            className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-black text-slate-950 shrink-0"
+                            style={{ backgroundColor: settingsDraft.branding.primaryColor }}
+                          >
+                            A
+                          </div>
+                        )}
+                        <span className="text-[10px] font-bold text-white truncate">
+                          {settingsDraft.logo.companyName || 'AGIMUS'}
+                        </span>
+                      </div>
+                      <span
+                        className="text-[8px] px-1.5 py-0.5 rounded border font-semibold"
+                        style={{
+                          color: settingsDraft.branding.primaryColor,
+                          borderColor: `${settingsDraft.branding.primaryColor}55`,
+                        }}
+                      >
+                        Sem Barra
+                      </span>
+                    </div>
+
+                    {/* Simulated Mobile Arena Ready Screen */}
+                    <div className="relative flex-1 p-3 flex flex-col items-center justify-center text-center overflow-hidden">
+                      {settingsDraft.sceneConfig?.mode === 'living_room_pests' && (
+                        <img
+                          src={settingsDraft.sceneConfig.customBackgroundUrl || livingRoomCatImg}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover opacity-35"
+                        />
+                      )}
+                      <div className="relative z-10 flex flex-col items-center gap-1.5">
+                        <div className="text-[11px] font-display font-black text-white leading-tight">
+                          {settingsDraft.uiCustomization?.startHeadline?.trim() ||
+                            (settingsDraft.sceneConfig?.mode === 'living_room_pests'
+                              ? 'ELIMINE AS PRAGAS DA SALA'
+                              : 'ARENA DE REFLEXOS')}
+                        </div>
+                        <div
+                          className="mt-1 px-4 py-1.5 rounded-lg text-[10px] font-display font-black text-slate-950 shadow"
+                          style={{ backgroundColor: settingsDraft.branding.primaryColor }}
+                        >
+                          {settingsDraft.uiCustomization?.startButtonText?.trim() || 'Começar Jogo'}
+                        </div>
+                        <div className="text-[8px] text-slate-300 font-mono-code mt-0.5">
+                          Alvo {Math.round((settingsDraft.mobileConfig?.targetSizeMultiplier ?? 1.25) * 100)}% · +
+                          {settingsDraft.mobileConfig?.extraReactionTimeMs ?? 150}ms
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-slate-400 text-center leading-relaxed">
+                    No celular sem teclado, segure o logotipo por <strong>1,5s</strong> ou toque <strong>5x rápidas</strong> para abrir este painel.
+                  </div>
                 </div>
               </div>
             </div>
@@ -2872,12 +3273,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs">
-          <span className="text-slate-400 font-mono-code text-[11px]">
-            Atalho rápido do Admin: <strong className="text-cyan-400">ALT + C</strong>
+        <div className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950 flex flex-wrap items-center justify-between gap-2 text-xs pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <span className="text-slate-400 font-mono-code text-[10px] sm:text-[11px]">
+            Atalho: <strong className="text-cyan-400">ALT + C</strong> · Mobile:{' '}
+            <strong className="text-cyan-400">5 toques / segurar logo</strong>
           </span>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onClose}
               className="px-4 py-2 text-slate-300 hover:text-white bg-slate-900 border border-slate-800 rounded-xl transition"

@@ -549,7 +549,7 @@ export default function App() {
 
   return (
     <div 
-      className="relative min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-cyan-500 selection:text-black overflow-x-hidden"
+      className="relative min-h-[100dvh] text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-cyan-500 selection:text-black overflow-x-hidden"
       style={{
         backgroundColor: bgColor,
         ['--theme-primary' as string]: primaryColor,
@@ -635,6 +635,7 @@ export default function App() {
           isFrameless={isFrameless}
           onToggleFrameless={handleToggleFrameless}
           onOpenRegistration={() => setShowRegistrationModal(true)}
+          mobileAdminGestureEnabled={adminSettings.mobileConfig?.mobileTouchGestureAdmin !== false}
         />
       )}
 
@@ -642,7 +643,7 @@ export default function App() {
       {isFrameless && (
         <button
           onClick={handleToggleFrameless}
-          className="fixed top-3 right-3 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/75 hover:bg-slate-800 border border-slate-700/70 text-slate-300 hover:text-white opacity-40 hover:opacity-100 transition flex items-center gap-1.5 backdrop-blur-sm"
+          className="fixed top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-40 px-3 py-2 min-h-[40px] rounded-lg text-xs font-semibold bg-slate-900/75 hover:bg-slate-800 border border-slate-700/70 text-slate-300 hover:text-white opacity-60 hover:opacity-100 transition flex items-center gap-1.5 backdrop-blur-sm"
           title="Mostrar Barra Superior"
         >
           <Minimize2 className="w-3.5 h-3.5" />
@@ -651,7 +652,7 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 py-6">
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-2.5 py-3 sm:px-4 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {activeTab === 'arena' && (
           <div>
             <Arena
@@ -662,6 +663,7 @@ export default function App() {
               customImage={effectiveCustomImage}
               sceneConfig={adminSettings.sceneConfig}
               uiCustomization={uiCustom}
+              mobileConfig={adminSettings.mobileConfig}
               onInstallOrFrameless={handleToggleFrameless}
               devOverrides={devOverrides}
               soundEnabled={soundEnabled}

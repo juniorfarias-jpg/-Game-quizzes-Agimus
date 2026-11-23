@@ -123,8 +123,8 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-8 shadow-2xl overflow-hidden max-h-[92dvh] overflow-y-auto">
         {/* Glow backdrop */}
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -250,7 +250,7 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2.5 text-center">
               Pragas Eliminadas na Sala
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
                 <div
                   key={kind}
@@ -323,35 +323,37 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
           </div>
 
           {!scoreSubmitted ? (
-            <form onSubmit={handleSubmit} className="flex gap-2">
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 placeholder="Seu Apelido no Ranking"
                 maxLength={16}
-                className="flex-1 px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                className="flex-1 min-h-[40px] px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
               />
-              <select
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-cyan-400"
-              >
-                <option value="🇵🇹">🇵🇹 PT</option>
-                <option value="🇧🇷">🇧🇷 BR</option>
-                <option value="🇺🇸">🇺🇸 US</option>
-                <option value="🇪🇸">🇪🇸 ES</option>
-                <option value="🇯🇵">🇯🇵 JP</option>
-                <option value="🇫🇷">🇫🇷 FR</option>
-                <option value="🇩🇪">🇩🇪 DE</option>
-                <option value="🇬🇧">🇬🇧 UK</option>
-              </select>
-              <button
-                type="submit"
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 active:scale-95 rounded-lg transition shadow-md"
-              >
-                Publicar
-              </button>
+              <div className="flex gap-2">
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="min-h-[40px] px-2.5 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                >
+                  <option value="🇵🇹">🇵🇹 PT</option>
+                  <option value="🇧🇷">🇧🇷 BR</option>
+                  <option value="🇺🇸">🇺🇸 US</option>
+                  <option value="🇪🇸">🇪🇸 ES</option>
+                  <option value="🇯🇵">🇯🇵 JP</option>
+                  <option value="🇫🇷">🇫🇷 FR</option>
+                  <option value="🇩🇪">🇩🇪 DE</option>
+                  <option value="🇬🇧">🇬🇧 UK</option>
+                </select>
+                <button
+                  type="submit"
+                  className="flex-1 sm:flex-none min-h-[40px] px-4 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 active:scale-95 rounded-lg transition shadow-md"
+                >
+                  Publicar
+                </button>
+              </div>
             </form>
           ) : (
             <button

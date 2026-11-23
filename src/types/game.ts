@@ -132,6 +132,18 @@ export interface AppCustomizationConfig {
   showHudSoundButton: boolean;
 }
 
+export interface MobileOptimizationConfig {
+  enabled: boolean;
+  targetSizeMultiplier: number; // 1.0 to 1.6
+  extraReactionTimeMs: number; // 0 to 500
+  arenaHeightMode: 'auto' | 'compact' | 'tall';
+  compactHudOnMobile: boolean;
+  hideCrosshairOnTouch: boolean;
+  hapticFeedback: boolean;
+  mobileTouchGestureAdmin: boolean;
+  recommendedOrientation: 'any' | 'portrait' | 'landscape';
+}
+
 export interface AppAdminSettings {
   passwordHash: string; // Master administrator password
   lockEntireAppWithPassword: boolean; // Require password to access and play the game
@@ -140,6 +152,7 @@ export interface AppAdminSettings {
   endGameImage: EndGameImageConfig;
   sceneConfig: ArenaSceneConfig;
   uiCustomization: AppCustomizationConfig;
+  mobileConfig: MobileOptimizationConfig;
   customLevelConfigs: Record<number, Partial<LevelConfig>>;
   tournamentMode: boolean; // Strict tournament mode: disables dev cheats
   adminDisplayName: string;

@@ -52,6 +52,17 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
     showHudMetrics: true,
     showHudSoundButton: true,
   },
+  mobileConfig: {
+    enabled: true,
+    targetSizeMultiplier: 1.25,
+    extraReactionTimeMs: 150,
+    arenaHeightMode: 'auto',
+    compactHudOnMobile: true,
+    hideCrosshairOnTouch: true,
+    hapticFeedback: true,
+    mobileTouchGestureAdmin: true,
+    recommendedOrientation: 'any',
+  },
   customLevelConfigs: {},
   tournamentMode: false,
   adminDisplayName: 'Administrador Agimus',
@@ -112,6 +123,10 @@ export function loadAdminSettings(): AppAdminSettings {
       uiCustomization: {
         ...DEFAULT_ADMIN_SETTINGS.uiCustomization,
         ...(parsed.uiCustomization || {}),
+      },
+      mobileConfig: {
+        ...DEFAULT_ADMIN_SETTINGS.mobileConfig,
+        ...(parsed.mobileConfig || {}),
       },
       branding: {
         ...DEFAULT_ADMIN_SETTINGS.branding,

@@ -55,6 +55,10 @@ export function subscribeToCloudSettings(
               ...DEFAULT_ADMIN_SETTINGS.uiCustomization,
               ...(cloudData.uiCustomization || {}),
             },
+            mobileConfig: {
+              ...DEFAULT_ADMIN_SETTINGS.mobileConfig,
+              ...(cloudData.mobileConfig || {}),
+            },
             branding: {
               ...DEFAULT_ADMIN_SETTINGS.branding,
               ...(cloudData.branding || {}),

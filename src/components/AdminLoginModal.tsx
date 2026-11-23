@@ -45,8 +45,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-      <div className="relative w-full max-w-md bg-[#0a0f1d] border-2 border-cyan-500/50 rounded-2xl p-6 sm:p-7 shadow-[0_0_35px_rgba(34,211,238,0.25)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-md">
+      <div className="relative w-full max-w-md bg-[#0a0f1d] border-2 border-cyan-500/50 rounded-2xl p-5 sm:p-7 shadow-[0_0_35px_rgba(34,211,238,0.25)] overflow-y-auto max-h-[92dvh]">
         {/* Glow corner */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 

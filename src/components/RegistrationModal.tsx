@@ -168,11 +168,11 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/90 backdrop-blur-md">
       <div 
-        className="relative w-full max-w-xl bg-[#090d18] border-2 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
+        className="relative w-full max-w-xl bg-[#090d18] border-2 rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden"
         style={{ borderColor: `${branding.primaryColor}88` }}
       >
         {/* Top Header with Company Branding */}
-        <div className="p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             {logo.enabled && logo.logoUrl ? (
               <img
@@ -211,7 +211,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition"
+            className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition shrink-0"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -220,8 +220,8 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
         {/* Tab Selection (Admin-only: normal users only see the registration form) */}
         {isAdminLoggedIn && (
-          <div className="px-5 pt-2.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/40">
-            <div className="flex items-center gap-2">
+          <div className="px-4 sm:px-5 pt-2.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/40 overflow-x-auto">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <button
                 onClick={() => setActiveTab('form')}
                 className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
