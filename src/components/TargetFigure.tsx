@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { TargetFigureData, FigureTheme, CustomTargetImageConfig } from '../types/game';
+import { PestSprite } from './PestSprite';
 
 interface TargetFigureProps {
   figure: TargetFigureData;
   theme: FigureTheme;
   customImage?: CustomTargetImageConfig;
+  showPestLabels?: boolean;
   showHitbox?: boolean;
   onClick: (figure: TargetFigureData, e: React.MouseEvent) => void;
 }
@@ -13,6 +15,7 @@ export const TargetFigure: React.FC<TargetFigureProps> = ({
   figure, 
   theme, 
   customImage,
+  showPestLabels = true,
   showHitbox = false,
   onClick 
 }) => {
@@ -46,21 +49,21 @@ export const TargetFigure: React.FC<TargetFigureProps> = ({
   const renderShapeContent = () => {
     if (figure.isTrap) {
       return (
-        <div className="relative w-full h-full flex items-center justify-center bg-red-950/80 rounded-full border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.7)] animate-pulse">
-          <svg viewBox="0 0 24 24" className="w-3/5 h-3/5 text-red-500 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="relative w-full h-full flex items-center justify-center bg-red-950/85 rounded-full border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.75)] animate-pulse">
+          <svg viewBox="0 0 24 24" className="w-3/5 h-3/5 text-red-400 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 8v4" strokeLinecap="round" />
             <circle cx="12" cy="16" r="1" fill="currentColor" />
             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <span className="absolute -bottom-4 text-[9px] font-mono-code font-bold tracking-wider text-red-400 bg-black/90 px-1 py-0.5 rounded border border-red-900/60 uppercase whitespace-nowrap">
+          <span className="absolute -bottom-4 text-[9px] font-mono-code font-bold tracking-wider text-red-300 bg-black/90 px-1.5 py-0.5 rounded border border-red-900/60 uppercase whitespace-nowrap">
             NÃO CLIQUE!
           </span>
         </div>
       );
     }
 
-    // Custom Target Image requested by user
+    // Custom Target Image requested by admin/user
     if (customImage?.enabled && customImage.imageUrl) {
       return (
         <div 
@@ -85,6 +88,17 @@ export const TargetFigure: React.FC<TargetFigureProps> = ({
             </span>
           )}
         </div>
+      );
+    }
+
+    // Living Room Pest Mode (Pulga, Carraça, Ovo de Pulga, Larva de Pulga)
+    if (figure.pestKind) {
+      return (
+        <PestSprite
+          pestKind={figure.pestKind}
+          isGolden={figure.isGolden}
+          showLabel={showPestLabels}
+        />
       );
     }
 

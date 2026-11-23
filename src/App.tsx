@@ -11,7 +11,8 @@ import {
   DevControlOverrides,
   AppAdminSettings,
   PlayerRegistration,
-  RegistrationFormConfig
+  RegistrationFormConfig,
+  PestKind
 } from './types/game';
 import { LEVELS, calculateTier, calculateStars, getMergedLevels } from './utils/levels';
 import { sound } from './utils/sound';
@@ -96,6 +97,8 @@ export default function App() {
   const [registrations, setRegistrations] = useState<PlayerRegistration[]>([]);
   const [showRegistrationModal, setShowRegistrationModal] = useState<boolean>(false);
   const [hasRegisteredThisSession, setHasRegisteredThisSession] = useState<boolean>(false);
+  const [pendingPlayAfterRegistration, setPendingPlayAfterRegistration] = useState<boolean>(false);
+  const [autoStartSignal, setAutoStartSignal] = useState<number>(0);
 
   // Hidden Control Panel & Custom Image states
   const [isControlPanelOpen, setIsControlPanelOpen] = useState<boolean>(false);
@@ -122,6 +125,7 @@ export default function App() {
     misses: number;
     trapsHit: number;
     records: HitRecord[];
+    pestBreakdown?: Record<PestKind, number>;
   } | null>(null);
 
   // 1. Subscribe to Cloud Settings for Real-Time Multi-Device Sync
@@ -168,16 +172,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAdminLoggedIn]);
 
-  // 5. Prompt registration before playing if required by Admin
-  useEffect(() => {
-    if (adminSettings.registration.enabled && !hasRegisteredThisSession && activeTab === 'arena') {
-      const timer = setTimeout(() => {
-        setShowRegistrationModal(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [adminSettings.registration.enabled, hasRegisteredThisSession, activeTab]);
-
   // Handle Admin Open
   const handleOpenAdmin = () => {
     if (isAdminLoggedIn) {
@@ -205,6 +199,16 @@ export default function App() {
     setArenaKey((k) => k + 1);
   };
 
+  // Intercept Arena "Começar Jogo" click if registration is enabled & not yet completed
+  const handleBeforeArenaStart = useCallback(() => {
+    if (adminSettings.registration.enabled && !hasRegisteredThisSession) {
+      setPendingPlayAfterRegistration(true);
+      setShowRegistrationModal(true);
+      return false;
+    }
+    return true;
+  }, [adminSettings.registration.enabled, hasRegisteredThisSession]);
+
   // Registration Handlers
   const handleCompleteRegistration = async (newReg: PlayerRegistration) => {
     setHasRegisteredThisSession(true);
@@ -214,6 +218,11 @@ export default function App() {
       savePlayerStats(updated);
       return updated;
     });
+
+    if (pendingPlayAfterRegistration) {
+      setPendingPlayAfterRegistration(false);
+      setAutoStartSignal((s) => s + 1);
+    }
 
     setRegistrations((prev) => [newReg, ...prev]);
     await saveRegistration(newReg);
@@ -317,6 +326,7 @@ export default function App() {
     misses: number;
     trapsHit: number;
     records: HitRecord[];
+    pestBreakdown?: Record<PestKind, number>;
   }) => {
     setLastStageStats(stats);
     setShowResultModal(true);
@@ -538,11 +548,14 @@ export default function App() {
               theme={playerStats.equippedTheme}
               crosshair={playerStats.equippedCrosshair}
               customImage={effectiveCustomImage}
+              sceneConfig={adminSettings.sceneConfig}
               devOverrides={devOverrides}
               soundEnabled={soundEnabled}
               onToggleSound={handleToggleSound}
               onRestart={handleRestartArena}
               onOpenControlPanel={handleOpenAdmin}
+              onBeforeStart={handleBeforeArenaStart}
+              autoStartSignal={autoStartSignal}
               onComplete={handleStageComplete}
               isAdminLoggedIn={isAdminLoggedIn}
               primaryColor={primaryColor}
@@ -714,10 +727,13 @@ export default function App() {
         onOpenAdmin={handleOpenAdmin}
       />
 
-      {/* Registration Modal with Inscrição, Configurar Formulário & Leads tabs */}
+      {/* Registration Modal (Participant Form only for regular users; Admin also sees Config & Leads) */}
       <RegistrationModal
         isOpen={showRegistrationModal}
-        onClose={() => setShowRegistrationModal(false)}
+        onClose={() => {
+          setShowRegistrationModal(false);
+          setPendingPlayAfterRegistration(false);
+        }}
         config={adminSettings.registration}
         onSaveConfig={handleSaveRegistrationConfig}
         logo={adminSettings.logo}

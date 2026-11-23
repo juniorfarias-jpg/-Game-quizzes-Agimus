@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { LevelConfig, HitRecord, DifficultyTier, PrizeReward, EndGameImageConfig, BrandingColorsConfig } from '../types/game';
+import { LevelConfig, HitRecord, DifficultyTier, PrizeReward, EndGameImageConfig, BrandingColorsConfig, PestKind } from '../types/game';
 import { calculateTier, calculateStars } from '../utils/levels';
 import { sound } from '../utils/sound';
+import { PestSprite, PEST_META } from './PestSprite';
 import { 
   Trophy, 
   RotateCcw, 
@@ -29,6 +30,7 @@ interface StageResultModalProps {
     misses: number;
     trapsHit: number;
     records: HitRecord[];
+    pestBreakdown?: Record<PestKind, number>;
   };
   onPlayAgain: () => void;
   onNextLevel?: () => void;
@@ -241,6 +243,33 @@ export const StageResultModal: React.FC<StageResultModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Pest Elimination Breakdown (Living Room Mode) */}
+        {stats.pestBreakdown && (
+          <div className="mb-6 p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2.5 text-center">
+              Pragas Eliminadas na Sala
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
+                <div
+                  key={kind}
+                  className="flex flex-col items-center gap-1 p-2 rounded-lg bg-slate-900/90 border border-slate-800"
+                >
+                  <div className="w-8 h-8">
+                    <PestSprite pestKind={kind} showLabel={false} />
+                  </div>
+                  <div className="text-sm font-mono-code font-bold text-white tabular-nums">
+                    {stats.pestBreakdown?.[kind] || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-400 text-center leading-tight">
+                    {PEST_META[kind].pluralLabel}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Unlocked Prizes Showcase */}
         {unlockedPrizes.length > 0 && (

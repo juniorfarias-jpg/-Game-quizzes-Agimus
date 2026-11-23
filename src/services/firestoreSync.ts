@@ -43,6 +43,14 @@ export function subscribeToCloudSettings(
               ...DEFAULT_ADMIN_SETTINGS.endGameImage,
               ...(cloudData.endGameImage || {}),
             },
+            sceneConfig: {
+              ...DEFAULT_ADMIN_SETTINGS.sceneConfig,
+              ...(cloudData.sceneConfig || {}),
+              enabledPests: {
+                ...DEFAULT_ADMIN_SETTINGS.sceneConfig.enabledPests,
+                ...(cloudData.sceneConfig?.enabledPests || {}),
+              },
+            },
             branding: {
               ...DEFAULT_ADMIN_SETTINGS.branding,
               ...(cloudData.branding || {}),

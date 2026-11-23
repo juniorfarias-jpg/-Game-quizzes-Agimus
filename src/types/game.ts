@@ -13,6 +13,22 @@ export type FigureShapeType =
 
 export type FigureTheme = 'neon' | 'crystals' | 'arcade' | 'plasma' | 'custom_image';
 
+export type PestKind = 'flea' | 'tick' | 'flea_egg' | 'flea_larva';
+
+export type ArenaSceneMode = 'living_room_pests' | 'classic';
+
+export interface ArenaSceneConfig {
+  mode: ArenaSceneMode;
+  customBackgroundUrl?: string;
+  enabledPests: {
+    flea: boolean;
+    tick: boolean;
+    flea_egg: boolean;
+    flea_larva: boolean;
+  };
+  showPestLabels: boolean;
+}
+
 export type CrosshairType = 'reticle' | 'cyan_ring' | 'ninja_shuriken' | 'quantum_vortex' | 'golden_cross' | 'cyber_eye';
 
 export interface CustomTargetImageConfig {
@@ -94,6 +110,7 @@ export interface AppAdminSettings {
   customImageMandatory: boolean; // Enforce custom image for all users
   customTargetImage: CustomTargetImageConfig;
   endGameImage: EndGameImageConfig;
+  sceneConfig: ArenaSceneConfig;
   customLevelConfigs: Record<number, Partial<LevelConfig>>;
   tournamentMode: boolean; // Strict tournament mode: disables dev cheats
   adminDisplayName: string;
@@ -108,6 +125,7 @@ export interface TargetFigureData {
   y: number; // percentage 10% to 85%
   size: number; // in pixels (e.g., 50px to 95px)
   shape: FigureShapeType;
+  pestKind?: PestKind;
   color: string;
   spawnTime: number; // performance.now()
   durationMs: number; // time before it vanishes
@@ -202,6 +220,7 @@ export interface HitRecord {
   combo: number;
   isGolden: boolean;
   isTrap: boolean;
+  pestKind?: PestKind;
   ratingText: string;
   x: number;
   y: number;

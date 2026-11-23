@@ -7,23 +7,30 @@ import {
   FigureTheme, 
   CrosshairType,
   CustomTargetImageConfig,
-  DevControlOverrides
+  DevControlOverrides,
+  ArenaSceneConfig,
+  PestKind
 } from '../types/game';
 import { sound } from '../utils/sound';
 import { TargetFigure } from './TargetFigure';
 import { CustomCrosshair } from './CustomCrosshair';
-import { Volume2, VolumeX, RotateCcw, Play, Pause, Flame, Target, Zap, ShieldAlert, Sliders } from 'lucide-react';
+import { PestSprite, PEST_META } from './PestSprite';
+import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
+import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders } from 'lucide-react';
 
 interface ArenaProps {
   level: LevelConfig;
   theme: FigureTheme;
   crosshair: CrosshairType;
   customImage?: CustomTargetImageConfig;
+  sceneConfig?: ArenaSceneConfig;
   devOverrides?: DevControlOverrides;
   soundEnabled: boolean;
   onToggleSound: () => void;
   onRestart: () => void;
   onOpenControlPanel?: () => void;
+  onBeforeStart?: () => boolean;
+  autoStartSignal?: number;
   onComplete: (stats: {
     levelId: number;
     score: number;
@@ -34,6 +41,7 @@ interface ArenaProps {
     misses: number;
     trapsHit: number;
     records: HitRecord[];
+    pestBreakdown?: Record<PestKind, number>;
   }) => void;
   isAdminLoggedIn?: boolean;
   primaryColor?: string;
@@ -69,16 +77,28 @@ const NEON_COLORS = [
 
 const SHAPES: FigureShapeType[] = ['circle', 'star', 'diamond', 'hexagon', 'triangle'];
 
+// Hotspots calibrated to the living room illustration (sofa, cat, left/right armchairs, rug & floor)
+const LIVING_ROOM_HOTSPOTS: { xMin: number; xMax: number; yMin: number; yMax: number; weight: number }[] = [
+  { xMin: 32, xMax: 44, yMin: 55, yMax: 67, weight: 2 }, // Tabby cat resting on sofa
+  { xMin: 22, xMax: 62, yMin: 47, yMax: 70, weight: 3 }, // Beige sofa & cushions
+  { xMin: 8, xMax: 25, yMin: 53, yMax: 84, weight: 2 },  // Teal armchair (left)
+  { xMin: 75, xMax: 92, yMin: 50, yMax: 80, weight: 2 }, // Mustard armchair (right)
+  { xMin: 26, xMax: 86, yMin: 68, yMax: 90, weight: 3 }, // Area rug & wooden floor
+];
+
 export const Arena: React.FC<ArenaProps> = ({
   level,
   theme,
   crosshair,
   customImage,
+  sceneConfig,
   devOverrides,
   soundEnabled,
   onToggleSound,
   onRestart,
   onOpenControlPanel,
+  onBeforeStart,
+  autoStartSignal = 0,
   onComplete,
   isAdminLoggedIn = false,
   primaryColor = '#00d2ff',
@@ -205,9 +225,25 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const handleStartGame = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (onBeforeStart && !onBeforeStart()) {
+      return;
+    }
     setCountdown(3);
     setGameState('countdown');
   };
+
+  // Auto-start trigger after completing registration from Play click
+  const prevAutoStartRef = useRef(autoStartSignal);
+  useEffect(() => {
+    if (autoStartSignal > 0 && autoStartSignal !== prevAutoStartRef.current) {
+      prevAutoStartRef.current = autoStartSignal;
+      setCountdown(3);
+      setGameState('countdown');
+    }
+  }, [autoStartSignal]);
+
+  const isLivingRoomMode =
+    sceneConfig?.mode === 'living_room_pests' && !(customImage?.enabled && customImage.imageUrl);
 
   // Target spawner logic
   const spawnTarget = useCallback(() => {
@@ -224,17 +260,32 @@ export const Arena: React.FC<ArenaProps> = ({
       const isTrap = Math.random() < trapChance && prev > 2;
       const isGolden = !isTrap && Math.random() < level.goldenChance;
       const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+
+      // Choose pest kind if Living Room Pest Mode is active
+      let pestKind: PestKind | undefined = undefined;
+      if (isLivingRoomMode && !isTrap) {
+        const enabledList: PestKind[] = [];
+        if (sceneConfig?.enabledPests?.flea !== false) enabledList.push('flea');
+        if (sceneConfig?.enabledPests?.tick !== false) enabledList.push('tick');
+        if (sceneConfig?.enabledPests?.flea_egg !== false) enabledList.push('flea_egg');
+        if (sceneConfig?.enabledPests?.flea_larva !== false) enabledList.push('flea_larva');
+        const pool: PestKind[] = enabledList.length > 0 ? enabledList : ['flea', 'tick', 'flea_egg', 'flea_larva'];
+        pestKind = pool[Math.floor(Math.random() * pool.length)];
+      }
+
       const color = isTrap 
         ? '#ef4444' 
         : isGolden 
         ? '#fbbf24' 
+        : pestKind
+        ? PEST_META[pestKind].color
         : NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)];
 
       const isMoving = devOverrides?.movingTargetsOverride != null
         ? devOverrides.movingTargetsOverride
         : level.movingTargets;
 
-      // Drift velocities for moving targets
+      // Drift velocities for moving targets (or subtle crawling for fleas/ticks in higher levels)
       const vx = isMoving ? (Math.random() - 0.5) * 0.4 : 0;
       const vy = isMoving ? (Math.random() - 0.5) * 0.4 : 0;
 
@@ -242,13 +293,29 @@ export const Arena: React.FC<ArenaProps> = ({
         ? devOverrides.targetDurationOverrideMs
         : level.baseDurationMs;
       const durationMs = isGolden ? Math.round(baseDur * 0.85) : baseDur;
-      const targetSize = devOverrides?.targetSizeOverridePx != null
+      const rawSize = devOverrides?.targetSizeOverridePx != null
         ? devOverrides.targetSizeOverridePx
         : level.targetSize;
+      const targetSize = pestKind ? Math.max(rawSize, 62) : rawSize;
 
-      // Random position with safety margin from edges
-      const x = 12 + Math.random() * 76;
-      const y = 14 + Math.random() * 72;
+      // Position selection: in living room mode spawn preferentially on sofa, armchairs, cat & rug
+      let x = 12 + Math.random() * 76;
+      let y = 14 + Math.random() * 72;
+
+      if (isLivingRoomMode) {
+        const totalWeight = LIVING_ROOM_HOTSPOTS.reduce((acc, h) => acc + h.weight, 0);
+        let roll = Math.random() * totalWeight;
+        let chosen = LIVING_ROOM_HOTSPOTS[0];
+        for (const spot of LIVING_ROOM_HOTSPOTS) {
+          roll -= spot.weight;
+          if (roll <= 0) {
+            chosen = spot;
+            break;
+          }
+        }
+        x = chosen.xMin + Math.random() * (chosen.xMax - chosen.xMin);
+        y = chosen.yMin + Math.random() * (chosen.yMax - chosen.yMin);
+      }
 
       const newFigure: TargetFigureData = {
         id: `fig-${Date.now()}-${Math.random()}`,
@@ -256,6 +323,7 @@ export const Arena: React.FC<ArenaProps> = ({
         y,
         size: targetSize,
         shape,
+        pestKind,
         color,
         spawnTime: performance.now(),
         durationMs,
@@ -289,7 +357,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       return prev + 1;
     });
-  }, [gameState, level]);
+  }, [gameState, level, isLivingRoomMode, sceneConfig, devOverrides]);
 
   // Schedule next spawns while playing
   useEffect(() => {
@@ -376,6 +444,18 @@ export const Arena: React.FC<ArenaProps> = ({
         ? Math.min(...validRecords.map((r) => r.reactionTimeMs)) 
         : 0;
 
+      const pestBreakdown: Record<PestKind, number> = {
+        flea: 0,
+        tick: 0,
+        flea_egg: 0,
+        flea_larva: 0,
+      };
+      validRecords.forEach((r) => {
+        if (r.pestKind) {
+          pestBreakdown[r.pestKind] = (pestBreakdown[r.pestKind] || 0) + 1;
+        }
+      });
+
       onCompleteRef.current({
         levelId: level.id,
         score,
@@ -386,9 +466,10 @@ export const Arena: React.FC<ArenaProps> = ({
         misses,
         trapsHit,
         records: hitRecords,
+        pestBreakdown: isLivingRoomMode ? pestBreakdown : undefined,
       });
     }
-  }, [gameState, hitRecords, misses, score, hits, trapsHit, level.id]);
+  }, [gameState, hitRecords, misses, score, hits, trapsHit, level.id, isLivingRoomMode]);
 
   // Target figure clicked
   const handleFigureClick = (figure: TargetFigureData, e: React.MouseEvent) => {
@@ -479,18 +560,20 @@ export const Arena: React.FC<ArenaProps> = ({
     setMaxCombo((max) => Math.max(max, nextCombo));
     setHits((h) => h + 1);
 
+    const pestMeta = figure.pestKind ? PEST_META[figure.pestKind] : null;
     const comboMultiplier = 1 + Math.min(nextCombo * 0.1, 2.0);
     const speedPoints = Math.max(150, Math.round(1100 - reactionTimeMs * 1.4)) + baseBonus;
-    const finalPoints = Math.round(speedPoints * comboMultiplier * (figure.isGolden ? 3 : 1));
+    const pestBonus = pestMeta ? pestMeta.bonusMultiplier : 1;
+    const finalPoints = Math.round(speedPoints * comboMultiplier * pestBonus * (figure.isGolden ? 3 : 1));
 
     setScore((s) => s + finalPoints);
 
     addFloatingText(
       clickX, 
       clickY, 
-      `+${finalPoints}`, 
+      pestMeta ? `${pestMeta.eliminatedText} +${finalPoints}` : `+${finalPoints}`, 
       `${reactionTimeMs}ms · ${ratingText}`, 
-      ratingColor
+      pestMeta ? pestMeta.color : ratingColor
     );
 
     spawnParticles(clickX, clickY, figure.isGolden ? '#fbbf24' : figure.color, figure.isGolden ? 30 : 16);
@@ -503,6 +586,7 @@ export const Arena: React.FC<ArenaProps> = ({
         combo: nextCombo,
         isGolden: figure.isGolden,
         isTrap: false,
+        pestKind: figure.pestKind,
         ratingText,
         x: clickX,
         y: clickY,
@@ -650,13 +734,15 @@ export const Arena: React.FC<ArenaProps> = ({
           >
             {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
           </button>
-          <button
-            onClick={onRestart}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
-            title="Reiniciar Fase"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+          {isAdminLoggedIn && (
+            <button
+              onClick={onRestart}
+              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              title="Reiniciar Fase (Admin)"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -670,21 +756,36 @@ export const Arena: React.FC<ArenaProps> = ({
           screenShake ? 'scale-[0.98] border-red-500 translate-x-1 translate-y-1' : 'border-indigo-500/20'
         }`}
       >
-        {/* Subtle Sci-Fi Grid lines */}
-        <div 
-          className="absolute inset-0 pointer-events-none opacity-20"
-          style={{
-            backgroundImage: `linear-gradient(to right, #38bdf818 1px, transparent 1px), linear-gradient(to bottom, #38bdf818 1px, transparent 1px)`,
-            backgroundSize: '40px 40px',
-          }}
-        />
+        {/* Living Room Background Scene (Sofás, Cadeirões, Tapete & Gato) */}
+        {isLivingRoomMode ? (
+          <>
+            <img
+              src={sceneConfig?.customBackgroundUrl || livingRoomCatImg}
+              alt="Sala de estar com sofás, cadeirões e gato"
+              className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-slate-950/15 pointer-events-none" />
+          </>
+        ) : (
+          <>
+            {/* Subtle Sci-Fi Grid lines */}
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-20"
+              style={{
+                backgroundImage: `linear-gradient(to right, #38bdf818 1px, transparent 1px), linear-gradient(to bottom, #38bdf818 1px, transparent 1px)`,
+                backgroundSize: '40px 40px',
+              }}
+            />
 
-        {/* Radar concentric target circles in background */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-          <div className="w-96 h-96 rounded-full border border-cyan-400" />
-          <div className="absolute w-64 h-64 rounded-full border border-indigo-400" />
-          <div className="absolute w-32 h-32 rounded-full border border-purple-400" />
-        </div>
+            {/* Radar concentric target circles in background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+              <div className="w-96 h-96 rounded-full border border-cyan-400" />
+              <div className="absolute w-64 h-64 rounded-full border border-indigo-400" />
+              <div className="absolute w-32 h-32 rounded-full border border-purple-400" />
+            </div>
+          </>
+        )}
 
         {/* Particles Canvas Overlay */}
         <canvas
@@ -700,13 +801,13 @@ export const Arena: React.FC<ArenaProps> = ({
             style={{ left: `${f.x}px`, top: `${f.y}px` }}
           >
             <span
-              className="text-lg font-display font-bold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+              className="text-base sm:text-lg font-display font-bold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] bg-slate-950/75 px-2 py-0.5 rounded-lg"
               style={{ color: f.color }}
             >
               {f.text}
             </span>
             {f.subText && (
-              <span className="text-[11px] font-mono-code font-semibold text-white/90 bg-black/70 px-1.5 py-0.5 rounded shadow">
+              <span className="text-[11px] font-mono-code font-semibold text-white/95 bg-black/80 px-1.5 py-0.5 rounded shadow mt-0.5">
                 {f.subText}
               </span>
             )}
@@ -721,6 +822,7 @@ export const Arena: React.FC<ArenaProps> = ({
               figure={fig}
               theme={theme}
               customImage={customImage}
+              showPestLabels={sceneConfig?.showPestLabels !== false}
               showHitbox={devOverrides?.showHitboxes}
               onClick={handleFigureClick}
             />
@@ -738,7 +840,7 @@ export const Arena: React.FC<ArenaProps> = ({
         {gameState === 'ready' && (
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md z-50 p-6 text-center select-none"
+            className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-[3px] z-50 p-6 text-center select-none"
           >
             {/* Ambient glows */}
             <div 
@@ -746,41 +848,56 @@ export const Arena: React.FC<ArenaProps> = ({
               style={{ backgroundColor: primaryColor }}
             />
 
-            <div className="relative z-10 flex flex-col items-center max-w-lg space-y-5 animate-in fade-in zoom-in-95 duration-200">
-              {/* Level indicator pill */}
+            <div className="relative z-10 flex flex-col items-center max-w-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              {/* Stage Subtitle */}
               <div 
-                className="px-3 py-1 rounded-full text-xs font-mono-code font-bold uppercase tracking-widest border"
-                style={{
-                  borderColor: `${primaryColor}66`,
-                  color: primaryColor,
-                  backgroundColor: `${primaryColor}15`,
-                }}
+                className="text-xs font-mono-code font-bold uppercase tracking-widest"
+                style={{ color: primaryColor }}
               >
                 Fase {level.id} · {level.name}
               </div>
 
               {/* Headline */}
               <div>
-                <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md">
-                  ARENA DE REFLEXOS
+                <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-wide drop-shadow-md text-balance">
+                  {isLivingRoomMode ? 'ELIMINE AS PRAGAS DA SALA' : 'ARENA DE REFLEXOS'}
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-md">
-                  Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!
+                <p className="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-lg drop-shadow">
+                  {isLivingRoomMode
+                    ? 'Pulgas, carraças, ovos e larvas começaram a surgir nos sofás, cadeirões, tapete e perto do gato. Clique rápido para eliminar!'
+                    : 'Acerte as figuras que surgem no ecrã o mais rápido possível para pontuar pelo seu tempo de reação!'}
                 </p>
               </div>
 
-              {/* Stage Parameters Pill Group */}
-              <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-mono-code">
-                <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300">
-                  🎯 {level.targetCount} Alvos
-                </span>
-                <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300">
-                  ⚡ Tolerância: {level.baseDurationMs}ms
-                </span>
+              {/* Pest Legend in Living Room Mode */}
+              {isLivingRoomMode && (
+                <div className="grid grid-cols-4 gap-2 sm:gap-3 w-full max-w-md pt-1">
+                  {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
+                    <div
+                      key={kind}
+                      className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900/85 border border-slate-700/80 shadow"
+                    >
+                      <div className="w-10 h-10">
+                        <PestSprite pestKind={kind} showLabel={false} />
+                      </div>
+                      <span className="text-[11px] font-semibold text-white whitespace-nowrap">
+                        {PEST_META[kind].label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Stage Parameters Clean Metadata */}
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono-code text-slate-300">
+                <span>{level.targetCount} Alvos</span>
+                <span aria-hidden="true">·</span>
+                <span>Tolerância: {level.baseDurationMs}ms</span>
                 {level.trapChance > 0 && (
-                  <span className="px-2.5 py-1 bg-red-950/60 border border-red-800/60 rounded-lg text-red-300">
-                    💣 Cuidado com Bombas
-                  </span>
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-red-300">Evite alvos proibidos</span>
+                  </>
                 )}
               </div>
 
@@ -788,7 +905,7 @@ export const Arena: React.FC<ArenaProps> = ({
               <button
                 type="button"
                 onClick={handleStartGame}
-                className="mt-2 px-10 py-4.5 rounded-2xl font-display font-black text-lg sm:text-xl uppercase tracking-wider text-slate-950 flex items-center gap-3.5 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                className="mt-1 px-10 py-4 rounded-2xl font-display font-black text-lg sm:text-xl uppercase tracking-wider text-slate-950 flex items-center gap-3.5 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                 style={{
                   backgroundColor: primaryColor,
                   boxShadow: `0 0 35px ${primaryColor}77`,
@@ -798,8 +915,8 @@ export const Arena: React.FC<ArenaProps> = ({
                 <span>Começar Jogo</span>
               </button>
 
-              <div className="text-[11px] text-slate-400 font-mono-code">
-                Toque no botão para iniciar a contagem regressiva
+              <div className="text-[11px] text-slate-300 font-mono-code">
+                Toque no botão para iniciar
               </div>
             </div>
           </div>

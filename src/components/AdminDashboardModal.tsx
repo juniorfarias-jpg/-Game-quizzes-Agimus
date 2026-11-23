@@ -7,11 +7,14 @@ import {
   PlayerRegistration,
   BrandingColorsConfig,
   CompanyLogoConfig,
-  RegistrationFormConfig
+  RegistrationFormConfig,
+  PestKind
 } from '../types/game';
 import { LEVELS } from '../utils/levels';
 import { updateAdminPassword } from '../utils/adminStorage';
 import { THEME_PRESETS } from '../utils/brandingPresets';
+import { PestSprite, PEST_META } from './PestSprite';
+import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
 import { 
   ShieldCheck, 
   Settings, 
@@ -473,7 +476,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <ImageIcon className="w-4 h-4" />
-            <span>Imagem do Alvo</span>
+            <span>Cenário & Alvos</span>
           </button>
 
           <button
@@ -1337,13 +1340,157 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: Imagem Global do Alvo */}
+          {/* TAB 4: Cenário da Divisão & Alvos */}
           {activeTab === 'image' && (
             <div className="space-y-5">
+              {/* Arena Scene Mode Selector */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-4">
+                <div>
+                  <div className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                    Cenário do Jogo na Arena
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Escolha entre a divisão da casa com pragas (sofás, cadeirões, gato, pulgas, carraças, ovos e larvas) ou a arena clássica.
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettingsDraft((prev) => ({
+                        ...prev,
+                        sceneConfig: {
+                          ...prev.sceneConfig,
+                          mode: 'living_room_pests',
+                        },
+                      }))
+                    }
+                    className={`p-3 rounded-xl border text-left transition flex items-start gap-3 ${
+                      settingsDraft.sceneConfig?.mode === 'living_room_pests'
+                        ? 'bg-cyan-950/50 border-cyan-400 shadow-md'
+                        : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <img
+                      src={settingsDraft.sceneConfig?.customBackgroundUrl || livingRoomCatImg}
+                      alt="Sala com gato"
+                      className="w-16 h-12 rounded-lg object-cover border border-slate-700 shrink-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-white">
+                        Sala com Gato & Pragas
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        Pulgas, carraças, ovos e larvas aparecem nos sofás, cadeirões e perto do gato.
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettingsDraft((prev) => ({
+                        ...prev,
+                        sceneConfig: {
+                          ...prev.sceneConfig,
+                          mode: 'classic',
+                        },
+                      }))
+                    }
+                    className={`p-3 rounded-xl border text-left transition flex items-start gap-3 ${
+                      settingsDraft.sceneConfig?.mode === 'classic'
+                        ? 'bg-cyan-950/50 border-cyan-400 shadow-md'
+                        : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="w-16 h-12 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0 text-cyan-400 font-display font-black text-xs">
+                      NEON
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">
+                        Arena Clássica / Alvo Livre
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        Alvos geométricos neon ou imagem personalizada carregada abaixo.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Living room pest options */}
+                {settingsDraft.sceneConfig?.mode === 'living_room_pests' && (
+                  <div className="pt-3 border-t border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-200">
+                        Pragas ativas para eliminar na sala:
+                      </span>
+                      <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsDraft.sceneConfig?.showPestLabels !== false}
+                          onChange={(e) =>
+                            setSettingsDraft((prev) => ({
+                              ...prev,
+                              sceneConfig: {
+                                ...prev.sceneConfig,
+                                showPestLabels: e.target.checked,
+                              },
+                            }))
+                          }
+                          className="accent-cyan-400"
+                        />
+                        <span>Mostrar nome da praga no alvo</span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => {
+                        const active = settingsDraft.sceneConfig?.enabledPests?.[kind] !== false;
+                        return (
+                          <label
+                            key={kind}
+                            className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition ${
+                              active
+                                ? 'bg-slate-900 border-cyan-500/50 text-white'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-500'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={(e) =>
+                                setSettingsDraft((prev) => ({
+                                  ...prev,
+                                  sceneConfig: {
+                                    ...prev.sceneConfig,
+                                    enabledPests: {
+                                      ...prev.sceneConfig.enabledPests,
+                                      [kind]: e.target.checked,
+                                    },
+                                  },
+                                }))
+                              }
+                              className="accent-cyan-400"
+                            />
+                            <div className="w-6 h-6 shrink-0">
+                              <PestSprite pestKind={kind} showLabel={false} />
+                            </div>
+                            <span className="text-[11px] font-semibold truncate">
+                              {PEST_META[kind].label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-between">
                 <div>
                   <div className="text-xs font-bold text-white flex items-center gap-2">
-                    <span>Tornar Imagem Obrigatória para Todos os Jogadores</span>
+                    <span>Substituir Alvos por Imagem Personalizada</span>
                     {settingsDraft.customImageMandatory && (
                       <span className="px-1.5 py-0.2 bg-cyan-400 text-slate-950 text-[9px] font-bold rounded">
                         OBRIGATÓRIA

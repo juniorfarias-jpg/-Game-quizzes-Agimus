@@ -21,6 +21,17 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
     subheadline: 'Obrigado por participar! Consulte a sua pontuação e tempo de reação abaixo.',
     ctaText: 'Começar Novamente',
   },
+  sceneConfig: {
+    mode: 'living_room_pests',
+    customBackgroundUrl: '',
+    enabledPests: {
+      flea: true,
+      tick: true,
+      flea_egg: true,
+      flea_larva: true,
+    },
+    showPestLabels: true,
+  },
   customLevelConfigs: {},
   tournamentMode: false,
   adminDisplayName: 'Administrador Agimus',
@@ -65,6 +76,14 @@ export function loadAdminSettings(): AppAdminSettings {
       endGameImage: {
         ...DEFAULT_ADMIN_SETTINGS.endGameImage,
         ...(parsed.endGameImage || {}),
+      },
+      sceneConfig: {
+        ...DEFAULT_ADMIN_SETTINGS.sceneConfig,
+        ...(parsed.sceneConfig || {}),
+        enabledPests: {
+          ...DEFAULT_ADMIN_SETTINGS.sceneConfig.enabledPests,
+          ...(parsed.sceneConfig?.enabledPests || {}),
+        },
       },
       branding: {
         ...DEFAULT_ADMIN_SETTINGS.branding,

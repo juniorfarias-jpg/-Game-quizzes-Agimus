@@ -72,6 +72,13 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     setDraftConfig(config);
   }, [config]);
 
+  // Non-admins must strictly only see the participant form
+  useEffect(() => {
+    if (!isAdminLoggedIn && activeTab !== 'form') {
+      setActiveTab('form');
+    }
+  }, [isAdminLoggedIn, activeTab]);
+
   if (!isOpen) return null;
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -211,46 +218,48 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Selection */}
-        <div className="px-5 pt-2.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/40">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('form')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
-                activeTab === 'form'
-                  ? 'border-cyan-400 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Inscrição</span>
-            </button>
+        {/* Tab Selection (Admin-only: normal users only see the registration form) */}
+        {isAdminLoggedIn && (
+          <div className="px-5 pt-2.5 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/40">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab('form')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
+                  activeTab === 'form'
+                    ? 'border-cyan-400 text-cyan-400'
+                    : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Inscrição</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('config')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
-                activeTab === 'config'
-                  ? 'border-cyan-400 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Configurar Formulário</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('config')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
+                  activeTab === 'config'
+                    ? 'border-cyan-400 text-cyan-400'
+                    : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Configurar Formulário</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('leads')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
-                activeTab === 'leads'
-                  ? 'border-cyan-400 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Inscritos ({registrations.length})</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('leads')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition ${
+                  activeTab === 'leads'
+                    ? 'border-cyan-400 text-cyan-400'
+                    : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Inscritos ({registrations.length})</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tab Body */}
         <div className="flex-1 p-5 overflow-y-auto space-y-4">
@@ -406,8 +415,8 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             </form>
           )}
 
-          {/* TAB 2: CONFIGURAÇÃO DO FORMULÁRIO */}
-          {activeTab === 'config' && (
+          {/* TAB 2: CONFIGURAÇÃO DO FORMULÁRIO (ADMIN ONLY) */}
+          {isAdminLoggedIn && activeTab === 'config' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -604,8 +613,8 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: LEADS / INSCRIÇÕES COLETADAS */}
-          {activeTab === 'leads' && (
+          {/* TAB 3: LEADS / INSCRIÇÕES COLETADAS (ADMIN ONLY) */}
+          {isAdminLoggedIn && activeTab === 'leads' && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
