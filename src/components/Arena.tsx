@@ -15,8 +15,9 @@ import { sound } from '../utils/sound';
 import { TargetFigure } from './TargetFigure';
 import { CustomCrosshair } from './CustomCrosshair';
 import { PestSprite, PEST_META } from './PestSprite';
+import { WalkingCats } from './WalkingCats';
 import livingRoomCatImg from '../assets/images/living_room_cat_scene_1795453020672.jpg';
-import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Play, Flame, Target, Zap, ShieldAlert, Sliders, Minimize2 } from 'lucide-react';
 
 interface ArenaProps {
   level: LevelConfig;
@@ -103,6 +104,7 @@ export const Arena: React.FC<ArenaProps> = ({
   isAdminLoggedIn = false,
   primaryColor = '#00d2ff',
 }) => {
+  const arenaRootRef = useRef<HTMLDivElement>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
   const particleCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -223,11 +225,33 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   }, [countdown, gameState]);
 
+  const tryEnterFullscreen = useCallback(() => {
+    try {
+      const el = arenaRootRef.current as (HTMLDivElement & { webkitRequestFullscreen?: () => Promise<void> }) | null;
+      if (el && !document.fullscreenElement) {
+        if (el.requestFullscreen) {
+          el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen().catch(() => {});
+        }
+      }
+    } catch {}
+  }, []);
+
+  const tryExitFullscreen = useCallback(() => {
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   const handleStartGame = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (onBeforeStart && !onBeforeStart()) {
       return;
     }
+    tryEnterFullscreen();
     setCountdown(3);
     setGameState('countdown');
   };
@@ -237,10 +261,11 @@ export const Arena: React.FC<ArenaProps> = ({
   useEffect(() => {
     if (autoStartSignal > 0 && autoStartSignal !== prevAutoStartRef.current) {
       prevAutoStartRef.current = autoStartSignal;
+      tryEnterFullscreen();
       setCountdown(3);
       setGameState('countdown');
     }
-  }, [autoStartSignal]);
+  }, [autoStartSignal, tryEnterFullscreen]);
 
   const isLivingRoomMode =
     sceneConfig?.mode === 'living_room_pests' && !(customImage?.enabled && customImage.imageUrl);
@@ -468,8 +493,9 @@ export const Arena: React.FC<ArenaProps> = ({
         records: hitRecords,
         pestBreakdown: isLivingRoomMode ? pestBreakdown : undefined,
       });
+      tryExitFullscreen();
     }
-  }, [gameState, hitRecords, misses, score, hits, trapsHit, level.id, isLivingRoomMode]);
+  }, [gameState, hitRecords, misses, score, hits, trapsHit, level.id, isLivingRoomMode, tryExitFullscreen]);
 
   // Target figure clicked
   const handleFigureClick = (figure: TargetFigureData, e: React.MouseEvent) => {
@@ -617,7 +643,7 @@ export const Arena: React.FC<ArenaProps> = ({
     setMousePos({ x: e.clientX, y: e.clientY });
   };
 
-  // Sync canvas size
+  // Sync canvas size (including fullscreen / full-viewport transitions)
   useEffect(() => {
     const handleResize = () => {
       if (arenaRef.current && particleCanvasRef.current) {
@@ -626,9 +652,18 @@ export const Arena: React.FC<ArenaProps> = ({
       }
     };
     handleResize();
+
+    let observer: ResizeObserver | null = null;
+    if (arenaRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(handleResize);
+      observer.observe(arenaRef.current);
+    }
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [gameState]);
 
   const totalAttempts = hits + misses;
   const currentAccuracy = totalAttempts > 0 ? Math.round((hits / totalAttempts) * 100) : 100;
@@ -637,9 +672,16 @@ export const Arena: React.FC<ArenaProps> = ({
     ? Math.round(validHits.reduce((acc, r) => acc + r.reactionTimeMs, 0) / validHits.length) 
     : 0;
 
+  const isFullScreenPlay = gameState === 'countdown' || gameState === 'playing';
+
   return (
     <div 
-      className="relative flex flex-col items-center w-full max-w-5xl mx-auto"
+      ref={arenaRootRef}
+      className={
+        isFullScreenPlay
+          ? 'fixed inset-0 z-50 w-screen h-screen bg-[#070b14] flex flex-col p-2 sm:p-4 overflow-hidden'
+          : 'relative flex flex-col items-center w-full max-w-5xl mx-auto'
+      }
       onMouseMove={handleMouseMove}
     >
       <CustomCrosshair
@@ -650,7 +692,11 @@ export const Arena: React.FC<ArenaProps> = ({
       />
 
       {/* Top HUD Bar */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 mb-3 bg-slate-900/80 backdrop-blur border border-slate-800 rounded-xl shadow-lg">
+      <div
+        className={`w-full flex flex-wrap items-center justify-between gap-3 px-4 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-xl shadow-lg ${
+          isFullScreenPlay ? 'py-2 mb-2 shrink-0' : 'py-3 mb-3'
+        }`}
+      >
         {/* Stage & Progress info */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center font-display font-bold text-indigo-400">
@@ -734,6 +780,18 @@ export const Arena: React.FC<ArenaProps> = ({
           >
             {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
           </button>
+          {isAdminLoggedIn && isFullScreenPlay && (
+            <button
+              onClick={() => {
+                tryExitFullscreen();
+                onRestart();
+              }}
+              className="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-lg transition-colors"
+              title="Sair da Tela Cheia (Admin)"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          )}
           {isAdminLoggedIn && (
             <button
               onClick={onRestart}
@@ -752,11 +810,13 @@ export const Arena: React.FC<ArenaProps> = ({
         onClick={handleArenaMiss}
         onMouseEnter={() => setIsHoveringArena(true)}
         onMouseLeave={() => setIsHoveringArena(false)}
-        className={`relative w-full h-[520px] bg-gradient-to-b from-[#0a0f1d] via-[#070b14] to-[#04070e] border-2 rounded-2xl overflow-hidden select-none cursor-crosshair shadow-2xl transition-transform ${
+        className={`relative w-full ${
+          isFullScreenPlay ? 'flex-1 min-h-0' : 'h-[520px]'
+        } bg-gradient-to-b from-[#0a0f1d] via-[#070b14] to-[#04070e] border-2 rounded-2xl overflow-hidden select-none cursor-crosshair shadow-2xl transition-transform ${
           screenShake ? 'scale-[0.98] border-red-500 translate-x-1 translate-y-1' : 'border-indigo-500/20'
         }`}
       >
-        {/* Living Room Background Scene (Sofás, Cadeirões, Tapete & Gato) */}
+        {/* Living Room Background Scene (Sofás, Cadeirões, Tapete & Gato + Gatos a Andar) */}
         {isLivingRoomMode ? (
           <>
             <img
@@ -766,6 +826,7 @@ export const Arena: React.FC<ArenaProps> = ({
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-slate-950/15 pointer-events-none" />
+            <WalkingCats active={gameState !== 'ended'} />
           </>
         ) : (
           <>
