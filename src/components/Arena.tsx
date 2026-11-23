@@ -11,7 +11,8 @@ import {
   ArenaSceneConfig,
   PestKind,
   AppCustomizationConfig,
-  MobileOptimizationConfig
+  MobileOptimizationConfig,
+  AppScreenOrientationMode
 } from '../types/game';
 import { sound } from '../utils/sound';
 import { TargetFigure } from './TargetFigure';
@@ -29,6 +30,7 @@ interface ArenaProps {
   sceneConfig?: ArenaSceneConfig;
   uiCustomization?: AppCustomizationConfig;
   mobileConfig?: MobileOptimizationConfig;
+  screenOrientation?: AppScreenOrientationMode;
   onInstallOrFrameless?: () => void;
   devOverrides?: DevControlOverrides;
   soundEnabled: boolean;
@@ -100,6 +102,7 @@ export const Arena: React.FC<ArenaProps> = ({
   sceneConfig,
   uiCustomization,
   mobileConfig,
+  screenOrientation = 'vertical',
   onInstallOrFrameless,
   devOverrides,
   soundEnabled,
@@ -753,13 +756,16 @@ export const Arena: React.FC<ArenaProps> = ({
     : 0;
 
   const isFullScreenPlay = gameState === 'countdown' || gameState === 'playing';
+  const isVerticalMode = screenOrientation === 'vertical';
   const showCrosshair =
     isHoveringArena &&
     gameState === 'playing' &&
     !(isTouchInput && (mobileConfig?.hideCrosshairOnTouch ?? true));
-  const compactMobileHud = isMobileViewport && (mobileConfig?.compactHudOnMobile ?? true);
+  const compactMobileHud = (isMobileViewport || isVerticalMode) && (mobileConfig?.compactHudOnMobile ?? true);
   const arenaHeightClass = isFullScreenPlay
     ? 'flex-1 min-h-0'
+    : isVerticalMode
+    ? 'flex-1 min-h-[440px]'
     : mobileConfig?.arenaHeightMode === 'compact'
     ? 'h-[400px] sm:h-[520px]'
     : mobileConfig?.arenaHeightMode === 'tall'
@@ -773,12 +779,18 @@ export const Arena: React.FC<ArenaProps> = ({
     ((mobileConfig?.recommendedOrientation === 'landscape' && isPortrait) ||
       (mobileConfig?.recommendedOrientation === 'portrait' && !isPortrait));
 
+  const verticalFramingWidthClass = isVerticalMode
+    ? 'w-full portrait:max-w-none landscape:max-w-[560px]'
+    : 'w-full';
+
   return (
     <div 
       ref={arenaRootRef}
       className={
         isFullScreenPlay
-          ? 'fixed inset-0 z-50 w-screen h-[100dvh] bg-[#070b14] flex flex-col p-1.5 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden'
+          ? 'fixed inset-0 z-50 w-screen h-[100dvh] bg-[#070b14] flex flex-col items-center p-1.5 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden'
+          : isVerticalMode
+          ? 'relative flex flex-col items-center w-full flex-1 min-h-0 mx-auto'
           : 'relative flex flex-col items-center w-full max-w-5xl mx-auto'
       }
       onPointerMove={handlePointerMove}
@@ -792,13 +804,13 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {/* Top HUD Bar */}
       <div
-        className={`w-full flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-4 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-xl shadow-lg ${
+        className={`${verticalFramingWidthClass} flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-4 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-xl shadow-lg ${
           isFullScreenPlay
             ? compactMobileHud
               ? 'py-1.5 sm:py-2 mb-1.5 sm:mb-2 shrink-0'
               : 'py-2 mb-2 shrink-0'
             : compactMobileHud
-            ? 'py-2 sm:py-3 mb-2 sm:mb-3'
+            ? 'py-2 sm:py-2.5 mb-2'
             : 'py-3 mb-3'
         }`}
       >
@@ -927,7 +939,7 @@ export const Arena: React.FC<ArenaProps> = ({
         onPointerDown={handleArenaMiss}
         onMouseEnter={() => setIsHoveringArena(true)}
         onMouseLeave={() => setIsHoveringArena(false)}
-        className={`relative w-full ${arenaHeightClass} ${
+        className={`relative ${verticalFramingWidthClass} ${arenaHeightClass} ${
           gameState === 'playing' ? 'touch-none' : ''
         } bg-gradient-to-b from-[#0a0f1d] via-[#070b14] to-[#04070e] border-2 rounded-2xl overflow-hidden select-none cursor-crosshair shadow-2xl transition-transform ${
           screenShake ? 'scale-[0.98] border-red-500 translate-x-1 translate-y-1' : 'border-indigo-500/20'
@@ -1077,7 +1089,11 @@ export const Arena: React.FC<ArenaProps> = ({
 
               {/* Pest Legend in Living Room Mode */}
               {isLivingRoomMode && uiCustomization?.showStartPestLegend !== false && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full max-w-md pt-1">
+                <div
+                  className={`grid ${
+                    isVerticalMode ? 'grid-cols-2 gap-2.5' : 'grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3'
+                  } w-full max-w-md pt-1`}
+                >
                   {(['flea', 'tick', 'flea_egg', 'flea_larva'] as PestKind[]).map((kind) => (
                     <div
                       key={kind}

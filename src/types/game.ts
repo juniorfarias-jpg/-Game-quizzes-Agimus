@@ -111,8 +111,11 @@ export interface EndGameImageConfig {
   ctaText?: string; // e.g. 'Jogar Novamente'
 }
 
+export type AppScreenOrientationMode = 'vertical' | 'horizontal';
+
 export interface AppCustomizationConfig {
   appTitle: string;
+  screenOrientation?: AppScreenOrientationMode;
   watermarkEnabled: boolean;
   watermarkUseCompanyLogo: boolean;
   watermarkUrl?: string;

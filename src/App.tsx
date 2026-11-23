@@ -57,7 +57,7 @@ import { HiddenControlPanel } from './components/HiddenControlPanel';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationModal } from './components/RegistrationModal';
-import { Sliders, ShieldCheck, UserPlus, Minimize2 } from 'lucide-react';
+import { Sliders, ShieldCheck, UserPlus, Minimize2, Monitor, Smartphone } from 'lucide-react';
 
 const CUSTOM_IMAGE_STORAGE_KEY = 'neuroreflex_custom_image_v1';
 
@@ -540,6 +540,19 @@ export default function App() {
   const backgroundPattern = adminSettings.branding.backgroundPattern || 'solid';
   const backgroundImageUrl = adminSettings.branding.backgroundImageUrl || '';
   const uiCustom = adminSettings.uiCustomization;
+  const screenOrientation = uiCustom?.screenOrientation || 'vertical';
+  const isVerticalScreen = screenOrientation === 'vertical';
+  const handleToggleScreenOrientation = () => {
+    const nextOrientation = isVerticalScreen ? 'horizontal' : 'vertical';
+    const updated: AppAdminSettings = {
+      ...adminSettings,
+      uiCustomization: {
+        ...adminSettings.uiCustomization,
+        screenOrientation: nextOrientation,
+      },
+    };
+    handleSaveAdminSettings(updated);
+  };
   const watermarkImage =
     uiCustom?.watermarkEnabled
       ? uiCustom.watermarkUseCompanyLogo
@@ -636,6 +649,7 @@ export default function App() {
           onToggleFrameless={handleToggleFrameless}
           onOpenRegistration={() => setShowRegistrationModal(true)}
           mobileAdminGestureEnabled={adminSettings.mobileConfig?.mobileTouchGestureAdmin !== false}
+          screenOrientation={screenOrientation}
         />
       )}
 
@@ -652,9 +666,15 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-2.5 py-3 sm:px-4 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <main
+        className={
+          isVerticalScreen
+            ? 'relative z-10 flex-1 flex flex-col w-full mx-auto portrait:max-w-none landscape:max-w-[560px] px-2.5 sm:px-3 py-2 sm:py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-h-0'
+            : 'relative z-10 flex-1 w-full max-w-6xl mx-auto px-2.5 py-3 sm:px-4 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))]'
+        }
+      >
         {activeTab === 'arena' && (
-          <div>
+          <div className={isVerticalScreen ? 'flex-1 flex flex-col min-h-0' : ''}>
             <Arena
               key={`${currentLevelId}-${arenaKey}`}
               level={currentLevel}
@@ -664,6 +684,7 @@ export default function App() {
               sceneConfig={adminSettings.sceneConfig}
               uiCustomization={uiCustom}
               mobileConfig={adminSettings.mobileConfig}
+              screenOrientation={screenOrientation}
               onInstallOrFrameless={handleToggleFrameless}
               devOverrides={devOverrides}
               soundEnabled={soundEnabled}
@@ -745,7 +766,23 @@ export default function App() {
                     <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-400 font-bold">C</kbd>
                   </span>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={handleToggleScreenOrientation}
+                      className="hover:underline flex items-center gap-1 font-semibold"
+                      style={{ color: primaryColor }}
+                      title="Alternar enquadramento do aplicativo entre Vertical e Horizontal"
+                    >
+                      {isVerticalScreen ? (
+                        <Smartphone className="w-3 h-3" />
+                      ) : (
+                        <Monitor className="w-3 h-3" />
+                      )}
+                      <span>
+                        Ecrã: {isVerticalScreen ? 'Na Vertical' : 'Na Horizontal'}
+                      </span>
+                    </button>
+
                     <button
                       onClick={() => setShowRegistrationModal(true)}
                       className="hover:underline flex items-center gap-1"

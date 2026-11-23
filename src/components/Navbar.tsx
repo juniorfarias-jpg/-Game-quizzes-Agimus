@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Crosshair, Trophy, Globe, Play, Volume2, VolumeX, Star, Zap, ShieldCheck, UserPlus, Maximize2, Minimize2 } from 'lucide-react';
-import { PlayerStats, CompanyLogoConfig, BrandingColorsConfig, AppCustomizationConfig } from '../types/game';
+import { PlayerStats, CompanyLogoConfig, BrandingColorsConfig, AppCustomizationConfig, AppScreenOrientationMode } from '../types/game';
 
 interface NavbarProps {
   activeTab: 'arena' | 'levels' | 'leaderboard' | 'gallery';
@@ -18,6 +18,7 @@ interface NavbarProps {
   onToggleFrameless?: () => void;
   onOpenRegistration?: () => void;
   mobileAdminGestureEnabled?: boolean;
+  screenOrientation?: AppScreenOrientationMode;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -36,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleFrameless,
   onOpenRegistration,
   mobileAdminGestureEnabled = true,
+  screenOrientation = 'vertical',
 }) => {
   const totalStars = Object.values(stats.levelProgress).reduce((acc, p) => acc + p.stars, 0);
   const primaryColor = branding?.primaryColor || '#00d2ff';
@@ -106,7 +108,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       className="w-full border-b sticky top-0 z-40 transition-colors duration-300 pt-[env(safe-area-inset-top)]"
       style={headerInlineStyle}
     >
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
+      <div
+        className={`mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3 ${
+          screenOrientation === 'vertical'
+            ? 'w-full portrait:max-w-none landscape:max-w-[560px]'
+            : 'max-w-6xl'
+        }`}
+      >
         {/* Brand / Logo (5 taps or 1.5s hold opens Admin on mobile touch devices) */}
         <div 
           onClick={handleLogoClick}

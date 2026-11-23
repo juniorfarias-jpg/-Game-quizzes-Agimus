@@ -34,6 +34,7 @@ export const DEFAULT_ADMIN_SETTINGS: AppAdminSettings = {
   },
   uiCustomization: {
     appTitle: 'Kiosk Game Agimus - Arena de Reação Rápida',
+    screenOrientation: 'vertical',
     watermarkEnabled: true,
     watermarkUseCompanyLogo: true,
     watermarkUrl: '',

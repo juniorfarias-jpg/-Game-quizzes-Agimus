@@ -53,7 +53,8 @@ import {
   Square,
   Zap,
   Smartphone,
-  Tablet
+  Tablet,
+  Monitor
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -255,6 +256,26 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const handleSaveAll = () => {
     onSaveAdminSettings(settingsDraft);
     showToast('Configurações salvas e sincronizadas na nuvem em tempo real!');
+  };
+
+  const currentScreenOrientation = settingsDraft.uiCustomization?.screenOrientation || 'vertical';
+
+  const handleToggleScreenOrientationImmediate = (nextOrientation?: 'vertical' | 'horizontal') => {
+    const target = nextOrientation || (currentScreenOrientation === 'vertical' ? 'horizontal' : 'vertical');
+    const updated: AppAdminSettings = {
+      ...settingsDraft,
+      uiCustomization: {
+        ...settingsDraft.uiCustomization,
+        screenOrientation: target,
+      },
+    };
+    setSettingsDraft(updated);
+    onSaveAdminSettings(updated);
+    showToast(
+      target === 'vertical'
+        ? 'Aplicativo enquadrado NA VERTICAL (Totem / Retrato)!'
+        : 'Aplicativo enquadrado NA HORIZONTAL (Widescreen / Paisagem)!'
+    );
   };
 
   // Preset theme selector
@@ -530,7 +551,28 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleToggleScreenOrientationImmediate()}
+              className="px-3 py-2 flex items-center gap-1.5 text-xs font-bold rounded-lg border transition active:scale-95 whitespace-nowrap"
+              style={{
+                borderColor: `${settingsDraft.branding.primaryColor}66`,
+                backgroundColor: `${settingsDraft.branding.primaryColor}1a`,
+                color: settingsDraft.branding.primaryColor,
+              }}
+              title="Alternar o enquadramento de todo o aplicativo entre Na Vertical e Na Horizontal"
+            >
+              {currentScreenOrientation === 'vertical' ? (
+                <Smartphone className="w-3.5 h-3.5" />
+              ) : (
+                <Monitor className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {currentScreenOrientation === 'vertical' ? 'Ecrã: Na Vertical' : 'Ecrã: Na Horizontal'}
+              </span>
+            </button>
+
             <button
               onClick={handleSaveAll}
               className="px-4 py-2 flex items-center gap-1.5 text-xs font-bold text-white rounded-lg transition shadow-md active:scale-95"
@@ -1330,6 +1372,129 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           {/* TAB: TEXTOS, MARCA D'ÁGUA & LAYOUT TOTAL DO APP */}
           {activeTab === 'layout' && (
             <div className="space-y-6">
+              {/* Screen Framing Selector: Vertical vs Horizontal */}
+              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                    {currentScreenOrientation === 'vertical' ? (
+                      <Smartphone className="w-4 h-4 text-cyan-400" />
+                    ) : (
+                      <Monitor className="w-4 h-4 text-cyan-400" />
+                    )}
+                    <span>Enquadramento do Ecrã (Na Vertical ou Na Horizontal)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Escolha se todo o aplicativo deve ser enquadrado para um ecrã vertical (totem/retrato) ou horizontal (monitor/paisagem).
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleScreenOrientationImmediate('vertical')}
+                    className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 ${
+                      currentScreenOrientation === 'vertical'
+                        ? 'bg-slate-950 shadow-lg'
+                        : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                    }`}
+                    style={{
+                      borderColor:
+                        currentScreenOrientation === 'vertical'
+                          ? settingsDraft.branding.primaryColor
+                          : undefined,
+                    }}
+                  >
+                    <div
+                      className="w-8 h-11 rounded border-2 flex items-center justify-center shrink-0 mt-0.5"
+                      style={{
+                        borderColor:
+                          currentScreenOrientation === 'vertical'
+                            ? settingsDraft.branding.primaryColor
+                            : '#475569',
+                      }}
+                    >
+                      <Smartphone
+                        className="w-4 h-4"
+                        style={{
+                          color:
+                            currentScreenOrientation === 'vertical'
+                              ? settingsDraft.branding.primaryColor
+                              : '#94a3b8',
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-white">
+                          Na Vertical (Totem / Retrato)
+                        </span>
+                        {currentScreenOrientation === 'vertical' && (
+                          <Check
+                            className="w-4 h-4 shrink-0"
+                            style={{ color: settingsDraft.branding.primaryColor }}
+                          />
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        Enquadra todo o aplicativo em formato vertical, preenchendo a altura total do ecrã.
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleScreenOrientationImmediate('horizontal')}
+                    className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 ${
+                      currentScreenOrientation === 'horizontal'
+                        ? 'bg-slate-950 shadow-lg'
+                        : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                    }`}
+                    style={{
+                      borderColor:
+                        currentScreenOrientation === 'horizontal'
+                          ? settingsDraft.branding.primaryColor
+                          : undefined,
+                    }}
+                  >
+                    <div
+                      className="w-11 h-8 rounded border-2 flex items-center justify-center shrink-0 mt-1"
+                      style={{
+                        borderColor:
+                          currentScreenOrientation === 'horizontal'
+                            ? settingsDraft.branding.primaryColor
+                            : '#475569',
+                      }}
+                    >
+                      <Monitor
+                        className="w-4 h-4"
+                        style={{
+                          color:
+                            currentScreenOrientation === 'horizontal'
+                              ? settingsDraft.branding.primaryColor
+                              : '#94a3b8',
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-white">
+                          Na Horizontal (Paisagem / Widescreen)
+                        </span>
+                        {currentScreenOrientation === 'horizontal' && (
+                          <Check
+                            className="w-4 h-4 shrink-0"
+                            style={{ color: settingsDraft.branding.primaryColor }}
+                          />
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        Enquadra o aplicativo em formato largo para monitores, TVs e tablets na horizontal.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* 1-Click Presets */}
               <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3">
                 <div>
